@@ -1,0 +1,187 @@
+/* ═══════════════════════════════════════════════════════
+   i18n — English (EN)
+   ═══════════════════════════════════════════════════════*/
+window.I18N_EN = {
+  // ─── Sidebar ───
+  factory:'Factory',
+  floor:'Floor',
+  selectFloor:'-- Select Floor --',
+  startHint:'Select a factory to start<br><span style="font-size:9px;color:#444c56">Press <b>F</b> toggle sidebar &bull; <b>?</b> shortcuts</span>',
+  selectFloorHint:'Select a floor to view map',
+  totalMachines:'Total Machines',
+  comingSoon:'(Coming Soon)',
+
+  // ─── Machine status ───
+  loader:'Loader',
+  unloader:'Unloader',
+  run:'RUN',
+  idle:'IDLE',
+  down:'DOWN',
+
+  // ─── Map / Legend ───
+  selectMap:'Select factory & floor to view map',
+  legendIdle:'IDLE',
+  legendDown:'DOWN / Error',
+  overview:'OVERVIEW',
+
+  // ─── Tooltip / Popup ───
+  type:'Type',
+  zone:'Zone',
+  error:'Error',
+  updated:'Updated',
+  mode:'Mode',
+  alarm:'Alarm',
+  alarmCategory:'Alarm Category',
+  productId:'Product ID',
+  lotQty:'LOT ID',
+  lotStartLabel:'LOT Start Time',
+  lotEndLabel:'LOT End Time',
+  totalSheet:'Total Sheet',
+  pctQr:'% QR',
+  date:'Date',
+  status:'Status',
+  statusHistory:'Status History',
+  noHistory:'No status history',
+
+  // ─── QR Code ───
+  qrRead:'QR Code Read',
+  qrCodeRead:'QR Code Read',
+
+  // ─── Connection ───
+  connected:'Connected',
+  disconnected:'Disconnected',
+  demoMode:'Demo',
+  lastUpdate:'Last Update:',
+
+  // ─── Search ───
+  search:'Search machine...',
+  noResults:'No machines found',
+
+  // ─── Alerts ───
+  alertNotif:'Alert Notifications',
+  noAlerts:'No alerts',
+
+  // ─── Keyboard shortcuts ───
+  kbEsc:'Close popup',
+  kbZoom:'Zoom',
+  kbReset:'Reset zoom',
+  kbSidebar:'Toggle sidebar',
+  kbScreenshot:'Screenshot',
+  kbSearch:'Search',
+  kbThis:'Shortcuts',
+
+  // ─── Daily Summary ───
+  dailySummary:'📊 Daily Summary (3 days)',
+  lots:'Lots',
+  panels:'Panels',
+  alarms:'Alarms',
+  loading:'⏳ Loading...',
+  loadError:'❌ Load failed',
+  noData:'— No data —',
+  hasData:'machines have data',
+  noMachineData:'No data yet',
+  others:'others',
+  pcs:'pcs',
+
+  // ─── Info Panel sections ───
+  machineInfo:'Machine Info',
+  qrHistory:'QR Code History',
+  qrHistoryByLot:'QR History (by LOT)',
+  pctQrHistory:'% QR History',
+  lotStartTime:'LOT Start Time',
+  lotEndTime:'LOT End Time',
+
+  // ─── Date range ───
+  today:'Today',
+  lastMonth:'Last Month',
+  latest100:'Latest 100',
+  allData:'All',
+  perPage100:'100 per page',
+  exportCsv:'⬇ CSV',
+  fullscreen:'⤢',
+  loadMore:'⬇ Load more (100)',
+  loadMore:'⬇ Load more (100)',
+
+  // ─── Machine Info history picker ───
+  viewHistoryDate:'View Past Date',
+  noMachineHistData:'No data for this machine on the selected date',
+  histBadge:'Viewing date',
+  machineDateTitle:'Pick a past date to view',
+  machineDateTodayTitle:'Back to live (today)',
+
+  // ─── NO_DATA ───
+  noDataMachine:'— Machine has no recent data —',
+  noDataPanel:'— NO DATA —',
+  noMachineSelected:'— Click a machine to view data —',
+  noQrData:'— No QR Code in this period —',
+  producing:'Producing...',
+  startLabel:'Start',
+  endLabel:'End',
+
+  // ─── Button titles (tooltips) ───
+  zoomIn:'Zoom In (+)',
+  zoomOut:'Zoom Out (-)',
+  zoomReset:'Reset Zoom (0)',
+  screenshot:'Screenshot (P)',
+  zoneEditor:'Zone Editor',
+  zoneToggle:'Show/Hide Zones',
+  zoneExport:'Export Zones (E)',
+  machineDrag:'Drag Machines (M)',
+  machineExport:'Export Machine Positions',
+  refreshBtn:'Refresh',
+  closeBtn:'Close',
+  exportCsvTitle:'Export CSV',
+  fullscreenTitle:'Fullscreen',
+
+  // ─── Admin mode ───
+  adminTitle:'🔐 Admin Mode',
+  adminPassword:'Password',
+  adminLoginError:'Incorrect password',
+  adminLoginBtn:'Login',
+  adminCancelBtn:'Cancel',
+  adminToolbarTitle:'🔐 Admin',
+  adminDrawZone:'Draw Zone',
+  adminMoveMachine:'Move Machine',
+  adminExportZones:'Export Zones',
+  adminExportMachines:'Export Machines',
+  adminToggleZones:'Show/Hide Zones',
+  adminExit:'Exit Admin',
+
+  // ─── Hints ───
+  zoneEditHint:'Click multiple points to draw a zone · Press Enter to finish · Press Esc to cancel · Click red dot to delete',
+  machineDragHint:'Drag machine to a new position · Press Esc to exit · Press ⬆M to Export',
+
+  // ─── QR Fullscreen ───
+  qrFullscreenTitle:'QR History',
+
+  // ─── Zone Export Modal ───
+  zoneExportTitle:'⬆ Export Zone Presets — copy code and paste into index.html',
+  zoneExportDesc:'Replace <code style="color:var(--accent)">ZONE_PRESETS</code> in index.html with this code → everyone will see the same zones',
+  zoneExportCopy:'📋 Copy',
+  machineExportTitle:'⬆M Export Machine Positions — copy code and paste into index.html',
+
+  // ─── Zone names ───
+  zoneTempOffice:'Temp Office',
+  zoneDrilling:'Drilling',
+  zoneLamination:'Lamination',
+  zonePressMachine:'Press Machine',
+  zoneTraywashing:'Traywashing',
+  zonePlasma:'Plasma',
+  zonePTCopperPlating:'PT Copper Plating',
+  zoneCopperPlating:'Copper Plating',
+  zoneVCP:'VCP',
+  zoneCopperPlatingII:'Copper Plating II',
+  zone16AxisGrinding:'16-Axis Grinding',
+  zonePlugHole:'Plug Hole',
+  zoneDESInnerLayer:'DES Inner Layer',
+  zoneInnerOuterLayer:'Inner & Outer Layer',
+  zoneAOI:'AOI',
+  zoneDES:'DES',
+  zoneRouting:'Routing',
+  zoneSurfaceTreatment:'Surface Treatment',
+  zoneSolderMask:'Solder Mask',
+  zoneETestFinalInspection:'E-Test Final Inspection',
+  zoneElectroplating:'Electroplating',
+  zoneLayer:'Layer',
+  zoneCopperPlating2:'Copper Plating',
+};

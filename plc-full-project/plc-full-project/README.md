@@ -1,6 +1,6 @@
 # PLC Monitor — EAP Factory Dashboard
 
-Real-time Machine Status Monitor สำหรับโรงงาน PA01
+Real-time Machine Status Monitor สำหรับโรงงาน PA01 และ PA06
 ดึงข้อมูลจาก Oracle DB ส่งผ่าน WebSocket มาแสดงบน Dashboard
 
 ## สถาปัตยกรรม
@@ -106,7 +106,7 @@ http://localhost:3001/
 
 สำคัญ: ต้องเปิดผ่าน `http://localhost:3001/` เท่านั้น ห้ามดับเบิ้ลคลิกไฟล์ `index.html` ตรง ๆ เพราะจะเป็น `file://` แล้ว fetch/WebSocket ไม่ได้
 
-เลือก PA01 → เลือกชั้น (1F / 2F) → สถานะเครื่องจักรจะแสดงบนแผนที่
+เลือก PA01 หรือ PA06 → เลือกชั้น (1F / 2F) → สถานะเครื่องจักรจะแสดงบนแผนที่
 
 ## API Endpoints
 
@@ -174,14 +174,16 @@ plc-full-project/
 │   ├── start-server.bat        ← ตัวเริ่มเซิร์ฟเวอร์บน Windows
 │   ├── queries/
 │   │   └── index_recommendations.sql  ← SQL อ้างอิงสำหรับดึงสถานะเครื่อง + QR %
-│   └── qr-logs/                ← (auto) CSV รายวัน — สร้างอัตโนมัติตอนรัน
+│   └── qr-logs/                ← (auto, git-ignored) CSV รายวัน — สร้างอัตโนมัติตอนรัน
 └── frontend/
     ├── index.html              ← Dashboard (HTML + CSS + JS ในไฟล์เดียว)
     ├── th.js                   ← ภาษาไทย
     ├── en.js                   ← ภาษาอังกฤษ
     ├── ch.js                   ← ภาษาจีน
-    ├── PA01_1F.jpg             ← แผนผังชั้น 1
-    └── PA01_2F.jpg             ← แผนผังชั้น 2
+    ├── PA01_1F.jpg             ← แผนผังชั้น 1 (PA01)
+    ├── PA01_2F.jpg             ← แผนผังชั้น 2 (PA01)
+    ├── PA06_1F.jpg             ← แผนผังชั้น 1 (PA06)
+    └── PA06_2F.jpg             ← แผนผังชั้น 2 (PA06)
 ```
 
 ## การแก้ปัญหา
@@ -193,7 +195,7 @@ plc-full-project/
 | โหลดไม่ได้ในเว็บ | เปิดเป็น `file://` | เปิดผ่าน `http://localhost:3001/` เท่านั้น |
 | ข้อมูลไม่ขึ้น | Oracle ยังไม่ติด | ดู terminal — รอ retry หรือเช็ค wifi อีกครั้ง |
 | Dashboard ไม่อัพเดต | WebSocket ตัด | เปิด console (F12) ดูสถานะ WS และ `#cdot` สีเขียวหรือไม่ |
-| ปุ่ม PA02–PA07 กดไม่ได้ | ปกติ | ตอนนี้ใช้ได้แค่ PA01 (ดู `active:false` ใน `FACTORIES` ใน `index.html`) |
+| ปุ่ม PA02–PA05, PA07 กดไม่ได้ | ปกติ | ตอนนี้ใช้ได้แค่ PA01 และ PA06 (ดู `active:false` ใน `FACTORIES` ใน `index.html`) |
 | ต้องการเข้า Admin Mode | ต้องใส่รหัส | กด `A` → รหัสผ่าน `admin` (เปลี่ยนได้ใน `index.html` ตรง `ADMIN_PASSWORD`) |
 | ดูข้อมูลย้อนหลังช้า | cache miss ครั้งแรก | คลิกซ้ำจะเร็วขึ้น (cache 5 นาที) ถ้ายังช้าอาจเป็นเพราะ Oracle ไม่มี index ดูด้านล่าง |
 
@@ -216,4 +218,4 @@ node test-conn.js
 - โฟลเดอร์ `backend/src/` เป็น modular version (poller / alertEngine / historyWriter / wsHub) ที่ยังไม่สมบูรณ์ ไม่ถูกใช้งานจริง — ทุกอย่างรวมอยู่ใน `eap-server.js` ไฟล์เดียว
 - หากต้องการใช้ Redis pub/sub สำหรับ multi-instance ในอนาคต ดูโครงสร้างเดิมใน `src/` เป็นจุดเริ่มต้น
 - Server ผูกกับ `0.0.0.0` — คนในวงเครือข่ายเดียวกันสามารถเข้าผ่าน LAN IP ของเครื่องที่รัน server ได้
-- QR log CSV แบ่งตามวันที่ `qr-logs/qr-YYYY-MM-DD.csv` — ลบไฟล์เก่ากว่า 30 วันอัตโนมัติตอน server start
+- QR log CSV แบ่งตามวันที่ `qr-logs/qr-YYYY-MM-DD.csv` — ลบไฟล์เก่ากว่า 30 วันอัตโนมัติตอน server start (โฟลเดอร์นี้อยู่ใน `.gitignore` ไม่ถูก commit ขึ้น git)

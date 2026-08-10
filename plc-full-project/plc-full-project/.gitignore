@@ -34,3 +34,5 @@ build/
 # ไฟล์ภาพ screenshot ที่ export จาก dashboard
 backend/screenshots/
 backend/exports/
+# QR log CSV รายวัน (auto-generated ตอนรัน server — ไม่ต้อง track)
+backend/qr-logs/

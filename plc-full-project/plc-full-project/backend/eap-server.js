@@ -1,15 +1,3 @@
-/**
- * eap-server.js — Standalone EAP Server (No Redis needed)
- *
- * ใช้ connect Oracle → poll → WebSocket → Frontend ตรงๆ
- *
- * วิธีรัน:
- *   1. คัดลอก Oracle credentials จาก DBeaver ใส่ .env
- *   2. cd backend
- *   3. node eap-server.js
- *
- * จากนั้นเปิด index.html ใน browser → เลือก PA01 → 1F
- */
 require('dotenv').config()
 
 const http = require('http')
@@ -40,6 +28,16 @@ function localDateTimeStr(d) {
   return localDateStr(d) + ' ' + hh + ':' + mi + ':' + ss + '.' + ms;
 }
 
+// ★ Escape ค่าสำหรับเขียนลง CSV field (RFC 4180): quote ถ้ามี comma/quote/newline,
+//   และ double ตัว " ที่อยู่ข้างในเพื่อไม่ให้ column เพี้ยนตอนเปิดด้วย Excel/CSV parser อื่น
+function csvEscape(v) {
+  v = String(v == null ? '' : v)
+  if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) {
+    return '"' + v.replace(/"/g, '""') + '"'
+  }
+  return v
+}
+
 // ★ ดึง LAN IP ทั้งหมดของเครื่อง (เพื่อแสดงให้ผู้ใช้รู้ว่าต้องแชร์ URL ไหน)
 function getLanIPs() {
   var ifaces = os.networkInterfaces();
@@ -65,9 +63,6 @@ try { if (!fs.existsSync(QR_LOG_DIR)) fs.mkdirSync(QR_LOG_DIR, { recursive: true
 function appendQrLog(machineId, lotId, panelId, isError, eventTime) {
   try {
     var d = eventTime ? new Date(eventTime) : new Date()
-    // ★ [FIX] เดิมใช้ toISOString() (UTC) → เหตุการณ์ช่วง 00:00-06:59 น. เวลาไทย
-    //   ถูกเขียนลงไฟล์ของ "เมื่อวาน" ด้วย timestamp ที่เลื่อนถอยหลัง 7 ชม.
-    //   เปลี่ยนเป็น local time เหมือน getDateRange/getDateRangeFromParams
     var dateStr = localDateStr(d) // YYYY-MM-DD (local)
     var fileName = 'qr-' + dateStr + '.csv'
     var filePath = path.join(QR_LOG_DIR, fileName)
@@ -75,10 +70,8 @@ function appendQrLog(machineId, lotId, panelId, isError, eventTime) {
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, 'timestamp,machine_id,lot_id,panel_id,is_read\n', 'utf8')
     }
-    // escape comma ใน field
-    var esc = function(v) { v = String(v == null ? '' : v); return v.indexOf(',') >= 0 ? '"' + v + '"' : v }
     var ts = localDateTimeStr(d)
-    var line = [ts, esc(machineId), esc(lotId), esc(panelId), isError ? 'FALSE' : 'TRUE'].join(',') + '\n'
+    var line = [ts, csvEscape(machineId), csvEscape(lotId), csvEscape(panelId), isError ? 'FALSE' : 'TRUE'].join(',') + '\n'
     fs.appendFile(filePath, line, 'utf8', function(err) {
       if (err) console.warn('[QRLog] append failed:', err.message)
     })
@@ -182,8 +175,6 @@ function getDateRange(range) {
   return { start: start, end: end, label: label }
 }
 
-// ★ สร้าง date range จาก start_date + end_date (YYYY-MM-DD strings)
-// ถ้าไม่มี → default = today
 function getDateRangeFromParams(startStr, endStr) {
   var now = new Date()
   var start, end, label
@@ -203,8 +194,6 @@ function getDateRangeFromParams(startStr, endStr) {
   return { start: start, end: end, label: label }
 }
 
-// ─── SQL Query: รายงานสรุปยอด Panel ต่อ LOT + Alarm (สำหรับสรุปรายวัน) ───
-// ใช้ query เวอร์ชัน G (ไม่ต้องมี index) จาก lot_alarm_report_noindex.sql
 async function fetchLotReport(days = 7) {
   let p = await getPool()
   let conn
@@ -312,10 +301,7 @@ async function fetchAllMachines() {
   }
 }
 
- // ─── SQL Query (เดียวกับที่ใช้ใน DBeaver) ───────────
- // ★ แยกเป็น 2 ส่วน:
- //   1. latest_status: ดึง status ล่าสุดของแต่ละเครื่อง (ไม่จำกัดเวลา) — รู้ status จริง
- //   2. panel_stats: ดึง panel events 15 นาทีย้อนหลัง — สำหรับ Total Sheet / % QR
+ // ─── SQL Query ───
  async function fetchLatestMachineStates() {
   const p = await getPool()
   const conn = await p.getConnection()
@@ -467,12 +453,7 @@ function normalizeRow(row) {
   }
 }
 
-// ─── SQL: QR history ของเครื่องเดียว (group by LOT) ────────
-// ใช้สำหรับ popup เครื่อง — แสดง PANEL_ID ทั้งหมดในช่วงเวลาที่เลือก
-// ★ Forward-fill + Back-fill LOT_ID:
-//   - ถ้าแผ่นปัจจุบันไม่มี LOT_ID → ดูแผ่นก่อนหน้า + ถัดไป
-//   - ถ้าแผ่นก่อนหน้ามี LOT_ID → forward-fill (ใช้ของก่อนหน้า)
-//   - ถ้าแผ่นถัดไปมี LOT_ID ต่างจากเดิม → back-fill (LOT ใหม่)
+// ─── SQL: QR history ของเครื่องเดียว ────────
 function fillLotIds(rows) {
   // rows มาเรียง DESC (ล่าสุดก่อน) เราจะทำงานกับเวลาจริง (ASC)
   var sorted = rows.slice().sort(function(a, b) {
@@ -511,7 +492,7 @@ function fillLotIds(rows) {
       }
     }
   }
-  return sorted
+  return sorted.reverse()
 }
 
 async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr) {
@@ -519,10 +500,6 @@ async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr)
   const conn = await p.getConnection()
   try {
     const r = startStr || endStr ? getDateRangeFromParams(startStr, endStr) : getDateRange(range)
-    // ★ [FIX] เดิมใช้ positional array binds ([start,end,machineId]) กับ SQL ที่มี :3 ซ้ำ 2 จุด
-    //   (SUB_EQP_ID = :3 OR MAIN_EQP_ID = :3) → จำนวน placeholder ในสเตทเมนต์ (4-5 ครั้ง นับซ้ำ)
-    //   ไม่ตรงกับจำนวนค่าที่ส่ง (3-4 ค่า) → NJS-098 → HTTP 500 → QR History ไม่ขึ้นเลย
-    //   เปลี่ยนเป็น named bind object และตั้งชื่อไม่ซ้ำกันทุกจุดที่ปรากฏ (ค่าเดียวกัน คนละชื่อ)
     var binds = { start_date: r.start, end_date: r.end, machine1: machineId, machine2: machineId }
     var limitClause = ''
     if (limit && limit > 0) {
@@ -625,9 +602,6 @@ async function fetchQrDaily(machineId, range, startStr, endStr) {
       var ok = r.OK_CNT || 0
       var err = r.ERR_CNT || 0
       return {
-        /* ★ [FIX] เดิมใช้ toISOString() ซึ่งแปลงเป็น UTC → วันเลื่อนถอยหลัง 1 วัน
-           (Oracle คืน 2026-08-09 00:00 local → toISOString ได้ 2026-08-08T17:00Z)
-           ใช้ localDateStr() แทนเพื่อคง timezone เดิม */
         date: r.QR_DAY instanceof Date ? localDateStr(r.QR_DAY) : String(r.QR_DAY),
         total: total,
         ok: ok,
@@ -653,10 +627,7 @@ async function fetchQrDaily(machineId, range, startStr, endStr) {
   }
 }
 
-// ─── SQL: ประวัติสถานะเครื่องเดียว (EQPSTATUS) ทั้งวัน ───────
-/* ★ [PERF] In-memory cache for status-history (alarm_text)
-   - TTL 30s, max 100 entries (FIFO eviction)
-*/
+// ─── SQL: ประวัติสถานะเครื่องเดียวทั้งวัน ───────
 const STATUS_HIST_CACHE_TTL_MS = 30 * 1000
 const STATUS_HIST_CACHE_MAX = 100
 const statusHistoryCache = new Map()
@@ -683,11 +654,6 @@ function setStatusHistCache(key, data) {
 
 async function fetchStatusHistory(machineId, range, startStr, endStr, limit, offset, alarmCategory) {
   const r = startStr || endStr ? getDateRangeFromParams(startStr, endStr) : getDateRange(range)
-  // ★ [PERF v2] ดึง latest status จาก snapshot ใน memory (ไม่ต้อง query Oracle!)
-  //   - snapshot ถูก update ทุก 5s โดย poller
-  //   - เป็นข้อมูลเดียวกับที่เห็นบน marker แผนผัง
-  //   - ประหยัด 2-3 วินาที Oracle query (CTE + 3 JOINs)
-  // ★ [PERF] check cache first
   const almCat = alarmCategory || 'all'
   const cacheKey = statusHistCacheKey(machineId, range, startStr, endStr, almCat)
   const cached = getStatusHistCache(cacheKey)
@@ -705,8 +671,6 @@ async function fetchStatusHistory(machineId, range, startStr, endStr, limit, off
     }
   }
   const t0 = Date.now()
-  /* ★ [FIX] snapshot = สถานะ "ปัจจุบัน" ใช้ได้เฉพาะตอน range ครอบคลุมวันนี้เท่านั้น
-     เดิมใส่ลง events เสมอ → เลือกวันย้อนหลังก็ยังเห็น event ของวันนี้โผล่มา */
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   const isLiveRange = r.end >= todayStart
   const snap = isLiveRange ? snapshot[machineId] : null
@@ -730,16 +694,9 @@ async function fetchStatusHistory(machineId, range, startStr, endStr, limit, off
   }
   console.log('[StatusHist] ✓ Snapshot lookup for ' + machineId + ': ' + (latestEvent ? 'HIT' : 'MISS') + ' (live=' + isLiveRange + ', ' + (Date.now() - t0) + 'ms)')
   var events = latestEvent ? [latestEvent] : []
-
-    /* ★ Query 2: ดึง alarm ทั้งหมดของเครื่อง (history ครบทุกอัน)
-       - ใช้ UNION ALL รวม events + alarms ใน query เดียว (เร็วกว่า 2 queries แยก)
-       - ลด connection round-trip */
-  // ★ [PERF v2] ได้ Oracle connection เฉพาะ Query 2 (alarms) เท่านั้น
   const p = await getPool()
   const conn = await p.getConnection()
   try {
-    /* ★ [FIX] โหมดย้อนหลัง (range ไม่ครอบวันนี้) → ต้อง query event จริงจาก DB
-       เดิมไม่มี query นี้เลย ทำให้ Status History ของวันย้อนหลังว่างเปล่า */
     if (!isLiveRange) {
       const evLimit = limit != null ? parseInt(limit, 10) : 50
       const evSql = `
@@ -758,9 +715,6 @@ async function fetchStatusHistory(machineId, range, startStr, endStr, limit, off
         WHERE ROWNUM <= :ev_limit
       `
       try {
-        /* ★ [FIX] เดิม bind :machine_id ซ้ำ 2 จุด ด้วยชื่อเดียวกัน → NJS-098 (placeholder นับซ้ำ
-           ไม่ตรงกับจำนวนค่า unique) → error ถูก catch เงียบๆ ด้านล่าง ทำให้ Status History
-           ของวันย้อนหลังว่างเปล่าโดยไม่มี error ให้เห็น ต้องตั้งชื่อ bind ไม่ให้ซ้ำ */
         const evResult = await conn.execute(evSql, {
           start_date: r.start,
           end_date: r.end,
@@ -823,9 +777,6 @@ async function fetchStatusHistory(machineId, range, startStr, endStr, limit, off
     var alarms = []
     try {
       const almLimit = limit != null ? parseInt(limit, 10) : 50
-      /* ★ [FIX] เดิม bind :machine_id ซ้ำ 3 จุด และ :alm_category ซ้ำ 2 จุด ด้วยชื่อเดียวกัน
-         → NJS-098 → error ถูก catch เงียบๆ ด้านล่าง ทำให้ alarm history ว่างเปล่าโดยไม่มี error
-         ต้องตั้งชื่อ bind ไม่ให้ซ้ำกันทุกจุดที่ปรากฏ */
       const almBinds = {
         start_date: r.start,
         end_date: r.end,
@@ -940,9 +891,7 @@ async function fetchQrSummary(range, startStr, endStr) {
   }
 }
 
-// ─── ดึงสถานะเครื่องย้อนหลังตามวันที่ ─────────────────────────
-// ใช้สำหรับหน้าเครื่อง (Machine Info) เวลา user เลือกดูข้อมูลย้อนหลัง
-// cache ฝั่ง server 5 นาที (ข้อมูลย้อนหลังไม่เปลี่ยน)
+// ─── ดึงสถานะเครื่องย้อนหลังตามวันที่ ───
 const MACHINE_HIST_CACHE_TTL_MS = 5 * 60 * 1000
 const MACHINE_HIST_CACHE_MAX = 200
 const machineHistoryCache = new Map()
@@ -982,8 +931,6 @@ async function fetchMachineHistory(machineId, dateStr) {
   const conn = await p.getConnection()
   try {
     const r = getDateRangeFromParams(dateStr, dateStr)
-    // ★ ใช้รูปแบบเดียวกับ fetchLatestMachineStates แต่กรองเฉพาะเครื่อง + วันที่
-    //   ไม่ aggregate PANEL_ID ด้วย MAX() เพราะเป็น CLOB → ใช้ ROW_NUMBER แทน
     const sql = `
       WITH latest_status AS (
         SELECT
@@ -1096,11 +1043,6 @@ async function fetchMachineHistory(machineId, dateStr) {
         ON M.LOT_NAME = COALESCE(BL.LOT_ID, E.LOT_ID)
       WHERE E.rn = 1
     `
-    /* ★ [FIX] เดิมใช้ positional bind แบบ array (:1-:15) → เปลี่ยนเป็น named bind แบบ object
-       ★ [FIX 2] แต่ละเงื่อนไข (SUB_EQP_ID = :x OR MAIN_EQP_ID = :x) เดิมใช้ชื่อ bind เดียวกันซ้ำ 2 ครั้ง
-       (เช่น :ls_machine ปรากฏ 2 ที่) ทำให้ node-oracledb นับจำนวน placeholder ในสเตทเมนต์ (20 ครั้ง
-       รวมของซ้ำ) ไม่ตรงกับจำนวนค่าที่ส่งมา (15 ชื่อ unique) → NJS-098
-       แก้โดยตั้งชื่อ bind ให้ไม่ซ้ำกันทุกจุดที่ปรากฏ (ค่าเดียวกัน คนละชื่อ) */
     const binds = {
       ls_start: r.start,  ls_end: r.end,  ls_machine1: machineId,  ls_machine2: machineId,   // latest_status
       ps_start: r.start,  ps_end: r.end,  ps_machine1: machineId,  ps_machine2: machineId,   // panel_stats
@@ -1138,7 +1080,6 @@ function hasChanged(prev, curr) {
   return (
     prev.status !== curr.status ||
     prev.alarm_text !== curr.alarm_text ||
-    prev.error_detail !== curr.error_detail ||
     prev.machine_mode !== curr.machine_mode ||
     prev.lot_id !== curr.lot_id ||
     prev.last_panel_id !== curr.last_panel_id
@@ -1173,12 +1114,9 @@ async function poll() {
       snapshot[id] = { ...curr }
     }
 
-    // ★ เช็คเครื่องที่ "หายไป" จากผลลัพธ์ (ไม่ active ใน POLL_MINUTES) → ตั้ง NO_DATA
-    // snapshot เป็น plain object {} ต้องใช้ Object.entries() ไม่ใช่ for...of ตรงๆ
     for (const [id, prev] of Object.entries(snapshot)) {
       if (latest.has(id)) continue            // ยัง active → ข้าม
       if (prev.status === 'NO_DATA') continue // อยู่ใน NO_DATA อยู่แล้ว → ข้าม
-      // เครื่องนี้ไม่มี LOT_ID ล่าสุด → NO_DATA (clear ข้อมูลตัวเลข)
       const noData = {
         machine_id: id,
         machine_name: prev.machine_name || id,
@@ -1236,11 +1174,19 @@ async function poll() {
           product_id: m.product_id,
         })
         // ★ Auto-log QR ลงไฟล์ CSV (บันทึกทุก panel รวม null/error/empty)
-        // is_read = FALSE ถ้า panel_id ขึ้นต้นด้วย Error, เป็น null/empty, หรือมีคำว่า NULL อยู่ในค่า (เช่น "[NULL]")
-        // is_read = TRUE ถ้า panel_id ปกติ (อ่านได้)
         var panelIdForLog = m.last_panel_id || '';
         var isErrorForLog = !panelIdForLog || String(panelIdForLog).indexOf('Error') === 0 || String(panelIdForLog).trim() === '' || /NULL/i.test(String(panelIdForLog));
         appendQrLog(m.machine_id, m.lot_id, panelIdForLog, isErrorForLog, m.panel_time || m.event_time)
+      }
+    }
+
+    // ★ [FIX] client ที่ต่อเข้ามาตอน snapshot ยังว่าง (ก่อน poll แรกเสร็จ) ถูกตั้ง _awaitingSnapshot ไว้
+    for (const ws of clients) {
+      if (ws._awaitingSnapshot) {
+        ws._awaitingSnapshot = false
+        try {
+          ws.send(JSON.stringify({ type: 'SNAPSHOT', data: snapshot }))
+        } catch { clients.delete(ws) }
       }
     }
   } catch (err) {
@@ -1298,7 +1244,6 @@ const app = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET')
 
-  // ★ Serve frontend (เปิดผ่าน http://localhost:3001 แทน file://)
   const urlPath = req.url.split('?')[0]
   if (urlPath === '/' || urlPath === '/index.html') {
     try {
@@ -1312,7 +1257,7 @@ const app = http.createServer(async (req, res) => {
   const ext = path.extname(urlPath).toLowerCase()
   if (MIME[ext]) {
     const filePath = path.join(frontendDir, urlPath)
-    if (filePath.startsWith(frontendDir) && fs.existsSync(filePath)) {
+    if ((filePath === frontendDir || filePath.startsWith(frontendDir + path.sep)) && fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath)
       res.writeHead(200, { 'Content-Type': MIME[ext] })
       res.end(data)
@@ -1326,7 +1271,6 @@ const app = http.createServer(async (req, res) => {
   } else if (req.url === '/api/snapshot') {
     sendJson(res, snapshot)
   } else if (req.url === '/api/machines') {
-    // ★ ดึงรายชื่อเครื่องจักรทั้งหมดจาก DB
     try {
       const rows = await fetchAllMachines()
       res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -1462,13 +1406,12 @@ const app = http.createServer(async (req, res) => {
       }
       const data = await fetchQrHistory(machineId, range, 0, 0, startStr, endStr) // limit=0 = all
       // Build CSV
-      var esc = function(v) { v = String(v == null ? '' : v); return v.indexOf(',') >= 0 ? '"' + v + '"' : v }
       var csv = 'timestamp,machine_id,lot_id,panel_id,is_read\n'
       data.lots.forEach(function(lot) {
         lot.panels.forEach(function(p) {
           // ★ [FIX] เดิมใช้ toISOString() (UTC) → timestamp ใน export เพี้ยนไป 7 ชม. จากเวลาไทยที่แสดงในหน้าเว็บ
           var ts = p.time instanceof Date ? localDateTimeStr(p.time) : String(p.time)
-          csv += [ts, esc(data.machine_id), esc(lot.lot_id), esc(p.panel_id), p.is_error ? 'FALSE' : 'TRUE'].join(',') + '\n'
+          csv += [ts, csvEscape(data.machine_id), csvEscape(lot.lot_id), csvEscape(p.panel_id), p.is_error ? 'FALSE' : 'TRUE'].join(',') + '\n'
         })
       })
       var dateLabel = data.label.replace(/ to /g, '_')
@@ -1539,7 +1482,6 @@ async function main() {
   console.log('[QRLog] Auto-cleanup done (retention: 30 days)')
 
   // ★ Start server ก่อนเลย (ไม่ exit ถ้า Oracle ไม่ติด)
-  // ★ '0.0.0.0' = รับ connection จากทุก IP (ไม่ใช่แค่ localhost)
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT} (accepts all interfaces)`)
     console.log(`[Server] Frontend  : http://localhost:${PORT}/`)
@@ -1581,10 +1523,11 @@ async function main() {
   async function retryLoop() {
     const ok = await tryConnectOracle(++attempt)
     if (!ok) {
-      setInterval(async () => {
+      const retryTimer = setInterval(async () => {
         const ok2 = await tryConnectOracle(++attempt)
         if (ok2) {
           console.log('[DB] ✓ Oracle reconnected! เริ่ม polling...')
+          clearInterval(retryTimer)
         }
       }, 30000)
     }

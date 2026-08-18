@@ -10,6 +10,7 @@
   "dependencies": {
     "dotenv": "^16.6.1",
     "oracledb": "^6.10.0",
+    "pdfkit": "^0.19.1",
     "ws": "^8.21.0"
   },
   "devDependencies": {

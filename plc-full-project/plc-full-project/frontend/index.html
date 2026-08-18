@@ -226,6 +226,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #zone-export-copy{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600}
 #zone-export-copy:hover{opacity:.85}
 
+/* ═══════ Camera modal (NVR live / playback) ═══════ */
+#camera-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99998;padding:20px;align-items:center;justify-content:center}
+#camera-modal.show{display:flex}
+#camera-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;max-width:900px;width:95%;display:flex;flex-direction:column;gap:10px}
+#camera-box h3{font-size:14px;color:var(--accent);margin:0}
+#camera-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#camera-close{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px}
+#camera-close:hover{background:var(--down);color:#fff;border-color:var(--down)}
+#camera-stage{background:#000;border:1px solid var(--border);border-radius:6px;min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+#camera-stage img,#camera-stage video{max-width:100%;max-height:70vh;display:block}
+#camera-msg{color:var(--muted);font-size:12px;text-align:center;padding:20px;line-height:1.6}
+#camera-msg.error{color:var(--down)}
+#camera-meta{font-size:11px;color:var(--muted);font-family:'Cascadia Code','Consolas','Courier New',monospace}
+.cam-btn{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px}
+.cam-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hist-cam-btn{background:none;border:1px solid var(--down);color:var(--down);border-radius:4px;padding:1px 6px;cursor:pointer;font-size:9px;margin-left:auto;flex:0 0 auto}
+.hist-cam-btn:hover{background:var(--down);color:#fff}
+
 /* Machine drag mode */
 #map.machine-drag-mode{cursor:default}
 #map.machine-drag-mode .mk{cursor:move!important}
@@ -1010,6 +1028,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
                 <option value="page" data-i18n="perPage100">หน้าละ 100</option>
               </select>
               <button onclick="exportQrCsv()" title="Export CSV" data-i18n-title="exportCsvTitle" style="flex:0 0 auto" data-i18n="exportCsv">⬇CSV</button>
+              <button onclick="generateVendorReport()" title="Vendor Evidence Pack (PDF)" data-i18n-title="vendorReportTitle" style="flex:0 0 auto" data-i18n="vendorReport">⬇PDF</button>
               <button onclick="openQrInNewTab()" title="ขยายเต็มจอ" data-i18n-title="fullscreenTitle" style="flex:0 0 auto;background:var(--accent);color:#fff;border-color:var(--accent)" data-i18n="fullscreen">⤢</button>
             </div>
           </div>
@@ -1086,6 +1105,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div>
   </div>
 
+  <!-- ★ Camera Modal (NVR live view / playback) -->
+  <div id="camera-modal" onclick="if(event.target===this)closeCameraModal()">
+    <div id="camera-box">
+      <div id="camera-head">
+        <h3 id="camera-title" data-i18n="cameraTitle">📹 กล้องวงจรปิด</h3>
+        <button id="camera-close" onclick="closeCameraModal()" data-i18n="closeBtn">ปิด</button>
+      </div>
+      <div id="camera-meta"></div>
+      <div id="camera-stage"><div id="camera-msg" data-i18n="cameraLoading">กำลังเชื่อมต่อกล้อง...</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="cam-btn" onclick="cameraShowLive()" data-i18n="cameraLive">🔴 ดูสด</button>
+        <button class="cam-btn" id="cameraPlaybackBtn" onclick="cameraReplayLast()" style="display:none" data-i18n="cameraReplay">⏪ ดูซ้ำช่วงเวลานี้</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ★ Admin Login Modal -->
   <div id="admin-login">
     <div id="admin-login-box">
@@ -1156,9 +1191,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <!-- ★ i18n translation files — แก้ไขคำแปลในไฟล์เหล่านี้โดยตรง -->
-<script src="th.js"></script>
-<script src="en.js"></script>
-<script src="ch.js"></script>
+<script src="i18n/th.js"></script>
+<script src="i18n/en.js"></script>
+<script src="i18n/ch.js"></script>
 
 <script>
 /* ═══════════════════════════════════════════════════════
@@ -1286,13 +1321,13 @@ function updateConnDisplay(){
    FACTORY & MACHINE DATA
    ═══════════════════════════════════════════════════════ */
 var FACTORIES = [
-  {id:'PA01', name:'PA01', label:'PA01 Factory',  floors:2, mapImg:['PA01_1F.jpg','PA01_2F.jpg'], active:true},
-  {id:'PA02', name:'PA02', label:'PA02 Factory',  floors:2, mapImg:['PA02_1F.jpg','PA02_2F.jpg'], active:false},
-  {id:'PA03', name:'PA03', label:'PA03 Factory',  floors:2, mapImg:['PA03_1F.jpg','PA03_2F.jpg'], active:false},
-  {id:'PA04', name:'PA04', label:'PA04 Factory',  floors:2, mapImg:['PA04_1F.jpg','PA04_2F.jpg'], active:false},
-  {id:'PA05', name:'PA05', label:'PA05 Factory',  floors:2, mapImg:['PA05_1F.jpg','PA05_2F.jpg'], active:false},
-  {id:'PA06', name:'PA06', label:'PA06 Factory',  floors:2, mapImg:['PA06_1F.jpg','PA06_2F.jpg'], active:true},
-  {id:'PA07', name:'PA07', label:'PA07 Factory',  floors:2, mapImg:['PA07_1F.jpg','PA07_2F.jpg'], active:false},
+  {id:'PA01', name:'PA01', label:'PA01 Factory',  floors:2, mapImg:['maps/PA01_1F.jpg','maps/PA01_2F.jpg'], active:true},
+  {id:'PA02', name:'PA02', label:'PA02 Factory',  floors:2, mapImg:['maps/PA02_1F.jpg','maps/PA02_2F.jpg'], active:false},
+  {id:'PA03', name:'PA03', label:'PA03 Factory',  floors:2, mapImg:['maps/PA03_1F.jpg','maps/PA03_2F.jpg'], active:false},
+  {id:'PA04', name:'PA04', label:'PA04 Factory',  floors:2, mapImg:['maps/PA04_1F.jpg','maps/PA04_2F.jpg'], active:false},
+  {id:'PA05', name:'PA05', label:'PA05 Factory',  floors:2, mapImg:['maps/PA05_1F.jpg','maps/PA05_2F.jpg'], active:false},
+  {id:'PA06', name:'PA06', label:'PA06 Factory',  floors:2, mapImg:['maps/PA06_1F.jpg','maps/PA06_2F.jpg'], active:true},
+  {id:'PA07', name:'PA07', label:'PA07 Factory',  floors:2, mapImg:['maps/PA07_1F.jpg','maps/PA07_2F.jpg'], active:false},
 ];
 
 var MACHINES_DB = {
@@ -1821,17 +1856,20 @@ function renderQrTabs(data) {
       html += '<span class="qr-lot-id" title="' + escH(lot.lot_id) + '">' + escH(lotDisplay) + '</span>';
       html += '<span class="qr-lot-time">'+t('startLabel')+' ' + lotStartStr + '</span>';
       html += '<span class="qr-lot-time' + (lotEndActive ? ' active' : '') + '">'+t('endLabel')+' ' + lotEndStr + '</span>';
-      html += '<span class="qr-lot-count">' + lot.panels.length + '</span>';
+      /* ★ นับเฉพาะแผ่นงานจริง — panels อาจมีแถว dummy/jig ปนอยู่ (แสดงได้ แต่ไม่นับ) */
+      html += '<span class="qr-lot-count">' + (lot.ok_count + lot.err_count) + '</span>';
       html += '<span class="qr-lot-pct ' + pctClass + '">' + pct.toFixed(1) + '%</span>';
       html += '</div>';
       html += '<div class="qr-lot-panels">';
       lot.panels.forEach(function(p) {
         var pTime = p.time instanceof Date ? p.time : (p.time ? new Date(p.time) : null);
         var time = (pTime && !isNaN(pTime.getTime())) ? pTime.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '—';
-        var color = p.is_error ? 'var(--down)' : 'var(--run)';
-        var icon = p.is_error ? '✗' : '✓';
+        /* ★ dummy/jig = ไม่ถูกนับในยอด → แสดงเป็นสีจาง + ไอคอน ○ */
+        var color = p.is_dummy ? 'var(--muted)' : p.is_error ? 'var(--down)' : 'var(--run)';
+        var icon = p.is_dummy ? '○' : p.is_error ? '✗' : '✓';
         var panelShort = String(p.panel_id).length > 22 ? String(p.panel_id).substr(0, 22) + '…' : p.panel_id;
-        html += '<div class="qr-panel-item" title="' + escH(p.panel_id) + '">' +
+        var titleTxt = p.panel_id + (p.is_dummy ? ' (dummy / jig — ไม่นับในยอดผลิต)' : '');
+        html += '<div class="qr-panel-item"' + (p.is_dummy ? ' style="opacity:.5"' : '') + ' title="' + escH(titleTxt) + '">' +
           '<span class="qr-panel-time">' + time + '</span>' +
           '<span class="qr-panel-icon" style="color:' + color + '">' + icon + '</span>' +
           '<span class="qr-panel-id">' + escH(panelShort) + '</span>' +
@@ -1873,6 +1911,107 @@ function exportQrCsv() {
   var startDate = startEl ? startEl.value : '';
   var endDate = endEl ? endEl.value : '';
   var url = (window.API_BASE || location.origin) + '/api/qr-export?machine_id=' + encodeURIComponent(qrPopupState.machineId) + '&start_date=' + encodeURIComponent(startDate) + '&end_date=' + encodeURIComponent(endDate);
+  window.open(url, '_blank');
+}
+
+/* ═══════ กล้องวงจรปิด (NVR) ═══════
+   ★ ยังไม่เคยทดสอบกับ NVR จริง — ต้องเติม NVR_HOST/USER/PASSWORD ใน backend/.env
+     และ map เครื่อง→channel ใน backend/camera-map.json ก่อนถึงจะใช้ได้ */
+var cameraState = { machineId: null, lastTime: null, available: null };
+
+/* โหลดรายชื่อเครื่องที่มีกล้อง (เรียกครั้งเดียวตอนเปิดหน้า) */
+function loadCameraAvailability() {
+  fetch((window.API_BASE || location.origin) + '/api/camera-map')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      cameraState.available = (d.configured && d.machines) ? d.machines : [];
+    })
+    .catch(function() { cameraState.available = []; });
+}
+
+function machineHasCamera(machineId) {
+  return !!(cameraState.available && cameraState.available.indexOf(machineId) >= 0);
+}
+
+function openCameraModal(machineId, atTime) {
+  cameraState.machineId = machineId;
+  cameraState.lastTime = atTime || null;
+  var modal = document.getElementById('camera-modal');
+  modal.classList.add('show');
+  document.getElementById('camera-meta').textContent =
+    machineId + (atTime ? '  ·  ' + new Date(atTime).toLocaleString('sv-SE') : '');
+  document.getElementById('cameraPlaybackBtn').style.display = atTime ? '' : 'none';
+  if (atTime) cameraShowPlayback(atTime); else cameraShowLive();
+}
+
+function closeCameraModal() {
+  document.getElementById('camera-modal').classList.remove('show');
+  /* ★ สำคัญ: ต้องล้าง src ทิ้ง ไม่งั้น MJPEG stream จะค้างเปิดอยู่กิน bandwidth ต่อ */
+  document.getElementById('camera-stage').innerHTML = '<div id="camera-msg"></div>';
+  cameraState.machineId = null;
+}
+
+function cameraSetMsg(text, isError) {
+  var stage = document.getElementById('camera-stage');
+  stage.innerHTML = '<div id="camera-msg"' + (isError ? ' class="error"' : '') + '></div>';
+  document.getElementById('camera-msg').textContent = text;
+}
+
+function cameraShowLive() {
+  if (!cameraState.machineId) return;
+  cameraSetMsg(t('cameraLoading'));
+  var url = (window.API_BASE || location.origin) + '/api/camera-live?machine_id='
+    + encodeURIComponent(cameraState.machineId) + '&_=' + Date.now();
+  var img = new Image();
+  img.onerror = function() { cameraSetMsg(t('cameraError'), true); };
+  img.onload = function() {
+    var stage = document.getElementById('camera-stage');
+    stage.innerHTML = '';
+    stage.appendChild(img);
+  };
+  img.src = url;
+}
+
+function cameraShowPlayback(atTime) {
+  if (!cameraState.machineId) return;
+  cameraSetMsg(t('cameraSearching'));
+  var url = (window.API_BASE || location.origin) + '/api/camera-playback?machine_id='
+    + encodeURIComponent(cameraState.machineId) + '&time=' + encodeURIComponent(new Date(atTime).toISOString());
+  /* เช็คก่อนว่า server ตอบ error JSON มาไหม (เช่น ไม่พบคลิป / NVR ไม่ได้ตั้งค่า) */
+  fetch(url).then(function(r) {
+    var ct = r.headers.get('content-type') || '';
+    if (!r.ok || ct.indexOf('json') >= 0) {
+      return r.json().then(function(j) { cameraSetMsg(j.error || t('cameraError'), true); });
+    }
+    return r.blob().then(function(blob) {
+      var stage = document.getElementById('camera-stage');
+      stage.innerHTML = '';
+      var v = document.createElement('video');
+      v.controls = true; v.autoplay = true;
+      v.src = URL.createObjectURL(blob);
+      /* ★ ถ้า NVR ส่งไฟล์เป็น PS (MPEG-2 Program Stream) เบราว์เซอร์จะเล่นไม่ได้
+         ต้อง remux ด้วย ffmpeg ฝั่ง server (เป็น dependency ใหม่ ต้องคุยกันก่อนเพิ่ม) */
+      v.onerror = function() { cameraSetMsg(t('cameraFormatError'), true); };
+      stage.appendChild(v);
+    });
+  }).catch(function() { cameraSetMsg(t('cameraError'), true); });
+}
+
+function cameraReplayLast() {
+  if (cameraState.lastTime) cameraShowPlayback(cameraState.lastTime);
+}
+
+// ★ Vendor Evidence Pack — ดึง PDF สำหรับเครื่องที่เปิดอยู่ใน info panel (ช่วงเวลาเดียวกับที่เลือกใน QR History)
+function generateVendorReport() {
+  if (!qrPopupState.machineId) {
+    alert(t('openPopupFirst'));
+    return;
+  }
+  var startEl = document.getElementById('qrDateStart');
+  var endEl = document.getElementById('qrDateEnd');
+  var startDate = startEl ? startEl.value : '';
+  var endDate = endEl ? endEl.value : '';
+  var url = (window.API_BASE || location.origin) + '/api/machines/evidence-pack?machine_id=' + encodeURIComponent(qrPopupState.machineId) + '&start_date=' + encodeURIComponent(startDate) + '&end_date=' + encodeURIComponent(endDate);
   window.open(url, '_blank');
 }
 
@@ -2868,11 +3007,16 @@ function renderStatusHistoryList(data, loadMore) {
     if (isAlarm) {
       /* ★ Alarm row — พื้นหลังแดงอ่อน + ขอบซ้ายแดง + ไอคอน ⚠ + alarm_text เป็นหลัก */
       var catText = ev.alarm_category ? '<span style="color:#d29922;font-size:9px;margin-left:6px">[' + escH(ev.alarm_category) + ']</span>' : '';
+      /* ★ ปุ่มดูกล้องตอนเกิด alarm — โชว์เฉพาะเครื่องที่ map กล้องไว้ใน camera-map.json */
+      var camBtn = machineHasCamera(statusHistState.machineId)
+        ? '<button class="hist-cam-btn" onclick="openCameraModal(\'' + escH(statusHistState.machineId) + '\',\'' + d.toISOString() + '\')" title="' + escH(t('cameraViewAt')) + '">📹</button>'
+        : '';
       html += '<div class="hist-item" style="flex-direction:column;align-items:stretch;padding:6px 8px;margin:3px 0;border-left:3px solid var(--down);background:rgba(248,81,73,.08);border-radius:4px">'
         + '<div style="display:flex;align-items:center;gap:8px">'
         + '<span class="hist-time" style="min-width:140px;color:var(--down)">' + dateStr + ' ' + timeStr + '</span>'
         + '<span style="color:var(--down);font-weight:700">⚠ ALARM</span>'
         + catText
+        + camBtn
         + '</div>'
         + (ev.alarm_text ? '<div style="margin-top:3px;margin-left:8px;font-size:10px;color:var(--down);font-family:\'Cascadia Code\',\'Consolas\',\'Courier New\',monospace;line-height:1.35;word-break:break-word">' + escH(ev.alarm_text) + '</div>' : '')
         + '</div>';
@@ -3067,7 +3211,7 @@ document.addEventListener('keydown',function(e){
     return;
   }
   switch(e.key){
-    case 'Escape':e.preventDefault();closePopup();if(alertPanelOpen)toggleAlertPanel();if(kbHintVisible)toggleKbHint();break;
+    case 'Escape':e.preventDefault();if(document.getElementById('camera-modal').classList.contains('show')){closeCameraModal();break}closePopup();if(alertPanelOpen)toggleAlertPanel();if(kbHintVisible)toggleKbHint();break;
     case '+':case '=':e.preventDefault();zoom(1.2);break;
     case '-':case '_':e.preventDefault();zoom(0.8);break;
     case '0':case 'Home':e.preventDefault();resetZoom();break;
@@ -4051,6 +4195,9 @@ function toggleMachineDrag() {
 }
 
 /* Drag machine */
+/* ★ โหลดรายชื่อเครื่องที่มีกล้อง map ไว้ (ตัดสินใจว่าจะโชว์ปุ่ม 📹 ไหม) */
+document.addEventListener('DOMContentLoaded', function() { loadCameraAvailability(); });
+
 document.addEventListener('DOMContentLoaded', function() {
   var mapEl = document.getElementById('map');
   if (!mapEl) return;

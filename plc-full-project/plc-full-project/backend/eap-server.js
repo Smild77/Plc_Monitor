@@ -7,6 +7,8 @@ const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
+const hikvision = require('./lib/hikvision')
+const evidencePack = require('./lib/evidence-pack')
 
 /* ★ Local date helper — ใช้ local timezone แทน UTC (ป้องกันวันที่ผิดช่วง 00:00-07:00 น.)
    ใช้ใน label ของ getDateRange + getDateRangeFromParams */
@@ -110,6 +112,34 @@ const ALLOWED_MACHINES = process.env.ALLOWED_MACHINES
   ? process.env.ALLOWED_MACHINES.split(',').map(s => s.trim().toUpperCase())
   : null
 
+// ─── กล้อง NVR (Hikvision ISAPI) ───────────────────────
+const NVR_CONFIG = {
+  host: process.env.NVR_HOST || '',
+  port: parseInt(process.env.NVR_PORT || '80'),
+  user: process.env.NVR_USER || '',
+  password: process.env.NVR_PASSWORD || '',
+}
+// ─── Vendor Evidence Pack ──────────────────────────────
+const QR_TARGET_PCT = parseFloat(process.env.QR_TARGET_PCT || '99')
+const REPORT_CONTACT = process.env.REPORT_CONTACT || ''
+const REPORT_PLANT = process.env.REPORT_PLANT || ''
+const DAY_SHIFT_START_HOUR = parseInt(process.env.DAY_SHIFT_START_HOUR || '8')
+// ★ ฟอนต์สำหรับ PDF — ต้องครอบคลุม CJK/ไทย เพราะ ALARM_TEXT ส่วนใหญ่เป็นภาษาจีน
+//   default = Arial Unicode MS (มากับ Windows) — เปลี่ยนได้ถ้าเครื่อง deploy ไม่มีฟอนต์นี้
+const PDF_FONT_PATH = process.env.PDF_FONT_PATH || ''
+
+const CAMERA_MAP_PATH = path.join(__dirname, 'config', 'camera-map.json')
+// ★ โหลดใหม่ทุกครั้งที่เรียก (ไฟล์เล็ก แก้ mapping ได้โดยไม่ต้อง restart server)
+function loadCameraMap() {
+  try {
+    var data = JSON.parse(fs.readFileSync(CAMERA_MAP_PATH, 'utf8'))
+    return data.machines || {}
+  } catch (e) {
+    console.warn('[Camera] อ่าน camera-map.json ไม่ได้:', e.message)
+    return {}
+  }
+}
+
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT
 oracledb.fetchAsString = [oracledb.CLOB]
 
@@ -194,6 +224,76 @@ function getDateRangeFromParams(startStr, endStr) {
   return { start: start, end: end, label: label }
 }
 
+// ─── Panel counting rules ─────────────────────────────────
+/*
+  ★ [FIX] "จำนวนแผ่น" ต้องนับเป็น "แผ่น" ไม่ใช่ "แถว event"
+  ปัญหาเดิม: SUM(CASE...) นับทุกแถว → ตัวเลขไม่กลม (ควรเป็น 40 / 80 ตามคาสเซ็ตต์)
+
+  สาเหตุที่เจอจากข้อมูลจริง (backend/qr-logs/*.csv รวม 8,606 แถว):
+    1. suffix "/0"  — แผ่นเดียวถูกบันทึก 2 ID เช่น 126071301900001001 กับ 126071301900001001/0
+                      พบที่ SMK-SPR-01-L 69 แผ่น → นับเกินเท่าตัว
+    2. suffix ",BD" / ",BB" — ฟอร์แมตปกติของ WIR-Vdevelop-01-UL (ไม่ได้ซ้ำ แต่ต้อง normalize ให้เทียบกันได้)
+    3. แผ่น dummy / jig — 'Dummy0F', 'M0960027E2000C-0607', 'M0960002G2000E-0607',
+                      'M0960013A2000G-0607', '0000M0960111B20093' (ID ตัวเดียววิ่งข้ามหลายเครื่อง)
+    4. สแกนเพี้ยน — '\x1cQ4784', '0'
+
+  วิธีแยก: normalize ก่อน แล้วตัดเฉพาะ ID ที่ "รู้แน่ว่าไม่ใช่แผ่นงาน" ออก
+
+  ★ เคยลองใช้ whitelist ('^[0-9]{14}[0-9A-Z][0-9]{3,5}$') แล้วพบว่า **ตัดเกิน** ตอนรันกับ DB จริง
+    (CPP-VCP-01-L หายไป 312/505 = 62%, WIR-SE-01-L/-UL หาย 357/351, WIR-Pretreatment-01-L/-UL หาย 240/240)
+    เลข L/UL เท่ากันเป๊ะ = เป็นทั้ง "ฟอร์แมต" ที่เครื่องกลุ่มนั้นใช้ ไม่ใช่ขยะ
+    → เปลี่ยนมาใช้ blacklist แทน: ฟอร์แมตแปลกใหม่ที่ยังไม่รู้จักจะถูก "นับ" ไว้ก่อน ปลอดภัยกว่านับขาด
+*/
+
+// ตัดทุกอย่างหลัง ',' หรือ '/' ออก → ได้ ID แกนกลางของแผ่น (CLOB → VARCHAR2 เพื่อให้ DISTINCT ได้)
+const SQL_NORM_PANEL = `UPPER(REGEXP_SUBSTR(DBMS_LOB.SUBSTR(PANEL_ID, 100, 1), '^[^,/]+'))`
+
+// ไม่ใช่แผ่นงาน — ตัดเฉพาะ 4 กรณีที่ยืนยันแล้ว (ทดสอบกับ qr-logs: ตัดออก 7 ID, เหลือแผ่นดี 5,463 ID ครบ)
+const SQL_IS_JUNK_PANEL = `(
+       ${SQL_NORM_PANEL} LIKE 'DUMMY%'
+       OR REGEXP_LIKE(${SQL_NORM_PANEL}, 'M[0-9]{7}[A-Z][0-9]{4}')
+       OR REGEXP_LIKE(${SQL_NORM_PANEL}, '[^0-9A-Z]')
+       OR LENGTH(${SQL_NORM_PANEL}) < 10
+     )`
+
+// แถวที่อ่าน QR ไม่ได้ (null / ว่าง / Error / NULL) — ใช้เกณฑ์เดิม แต่ทำ UPPER ทุกที่ให้ครอบคลุม 'ERROR_' ตัวใหญ่
+const SQL_IS_UNREAD = `(PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%')`
+
+// คอลัมน์มาตรฐานที่ใช้ต่อ: NORM_PANEL (ID ที่ normalize แล้ว) + IS_REAL (1 = แผ่นงานจริง) + IS_UNREAD (1 = อ่านไม่ได้)
+const SQL_PANEL_FLAGS = `
+          ${SQL_NORM_PANEL} AS NORM_PANEL,
+          CASE WHEN ${SQL_IS_UNREAD} THEN 1 ELSE 0 END AS IS_UNREAD,
+          CASE WHEN ${SQL_IS_UNREAD} THEN 0
+               WHEN ${SQL_IS_JUNK_PANEL} THEN 0
+               ELSE 1 END AS IS_REAL`
+
+// นับ "แผ่น" ไม่ใช่ "แถว": OK = แผ่นงานจริงแบบไม่ซ้ำ, ERROR = จำนวนครั้งที่อ่านไม่ได้ (ซ้ำไม่ได้อยู่แล้ว)
+const SQL_COUNT_OK  = `COUNT(DISTINCT CASE WHEN IS_REAL = 1 THEN NORM_PANEL END)`
+const SQL_COUNT_ERR = `SUM(IS_UNREAD)`
+
+/*
+  ★ [FIX] CEID 10117 ไม่ใช่ event อ่านแผ่น
+  ตรวจจาก DB จริง: 1,648 แถว/วัน บน 15 เครื่อง, DATAITEM01 = '1'..'6' (เลขพอร์ต),
+  และ COUNT(DISTINCT PANEL_ID) = 0 ทุกกลุ่ม → PANEL_ID ว่างหมด
+  ของเดิมนับแถวพวกนี้เป็น "อ่าน QR ไม่ได้" → กด %QR ต่ำเกินจริง
+  (เช่น GLD-IR-01-UL ได้ OK=0/ERR=24 = 0% ขณะที่ GLD-IR-01-L LOT เดียวกันได้ 40/0 = 100%)
+*/
+const SQL_IS_PANEL_EVENT = `(CEID IS NULL OR TO_CHAR(CEID) <> '10117')`
+
+/*
+  ★ [FIX] Total Sheet นับ "ต่อ LOT" ไม่ใช่ 24 ชม.
+  วัดจาก DB จริง (LOT ที่จบแล้ว 45 LOT): ต่อ LOT กลมเป๊ะ 40/60/80 = 19/45 LOT (42%)
+  ส่วนแบบ 24 ชม. กลม 6/102 เครื่อง (5.9%) ซึ่งเท่ากับความบังเอิญ — คร่อมหลาย LOT เลยไม่มีทางกลม
+  ถ้าเครื่องไหนยังไม่มี LOT (BL เป็น null) ค่อย fallback ไปใช้ยอด 24 ชม. ของเดิม
+*/
+const SQL_SHEET_OK  = `COALESCE(BL.LOT_OK_PANELS, P.OK_PANELS)`
+const SQL_SHEET_ERR = `COALESCE(BL.LOT_ERROR_COUNT, P.ERROR_COUNT)`
+const SQL_PCT_QR = `
+        CASE WHEN NVL(${SQL_SHEET_OK}, 0) + NVL(${SQL_SHEET_ERR}, 0) = 0 THEN 0
+             ELSE ROUND(NVL(${SQL_SHEET_OK}, 0) * 100.0
+                        / (NVL(${SQL_SHEET_OK}, 0) + NVL(${SQL_SHEET_ERR}, 0)), 2)
+        END`
+
 async function fetchLotReport(days = 7) {
   let p = await getPool()
   let conn
@@ -216,14 +316,21 @@ async function fetchLotReport(days = 7) {
               LOT_ID,
               PANEL_ID,
               DATE_TIME,
+              /* ★ [FIX] เดิม PARTITION BY LOT_ID, PANEL_ID เฉยๆ → แผ่นเดียวกันที่ผ่านทั้ง -L และ -UL
+                 ถูกตัดทิ้งไปฝั่งหนึ่ง ทำให้เครื่องปลายทางนับได้น้อยกว่าจริง จึงต้องแยกตามเครื่องด้วย
+                 และ dedup ด้วย ID ที่ normalize แล้ว (ตัด ",BD" / "/0" ออก) */
               ROW_NUMBER() OVER (
-                  PARTITION BY LOT_ID, PANEL_ID
+                  PARTITION BY SUB_EQP_ID, LOT_ID, ${SQL_NORM_PANEL}
                   ORDER BY DATE_TIME
               ) AS rn
           FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
           WHERE (SUB_EQP_ID LIKE '%-L'  OR  SUB_EQP_ID LIKE '%-UL')
-            AND (DBMS_LOB.SUBSTR(PANEL_ID, 5, 1) IS NULL OR DBMS_LOB.SUBSTR(PANEL_ID, 5, 1) <> 'Error')
-            AND (PANEL_ID IS NULL OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%')
+            /* ★ [FIX] เดิมเทียบ 'Error' แบบ case-sensitive → 'ERROR_...' ตัวใหญ่หลุดมานับเป็นแผ่นดี */
+            AND NOT ${SQL_IS_UNREAD}
+            /* ★ [FIX] ตัดแผ่น dummy / jig / สแกนเพี้ยนออกจากยอดผลิต */
+            AND NOT ${SQL_IS_JUNK_PANEL}
+            /* ★ [FIX] ตัด event ที่ไม่ใช่การอ่านแผ่น */
+            AND ${SQL_IS_PANEL_EVENT}
             AND DATE_TIME >= SYSDATE - :1
       ),
       lot_summary AS (
@@ -321,33 +428,42 @@ async function fetchAllMachines() {
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
         WHERE DATE_TIME >= SYSDATE - 1440/1440
       ),
-panel_stats AS (
-        -- ★ [BUG FIX] %QR รวมทุก LOT ใน 24 ชม. (GROUP BY MACHINE_ID เท่านั้น ไม่แยก LOT)
+      -- ★ [FIX] normalize PANEL_ID + คัด dummy/jig ครั้งเดียว แล้วใช้ต่อทั้ง panel_stats และ lot_panel_stats
+      panel_base AS (
         SELECT
           COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
-          SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS OK_PANELS,
-          SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS ERROR_COUNT,
-          MIN(DATE_TIME) AS FIRST_EVENT_TIME,
-          MAX(DATE_TIME) AS LAST_EVENT_TIME
+          LOT_ID,
+          DATE_TIME,
+${SQL_PANEL_FLAGS}
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
         WHERE DATE_TIME >= SYSDATE - 1440/1440
-        GROUP BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID)
+          AND ${SQL_IS_PANEL_EVENT}
+      ),
+      panel_stats AS (
+        -- ★ ยอด 24 ชม. — ตอนนี้ใช้เป็น fallback เฉพาะเครื่องที่ยังไม่มี LOT เท่านั้น
+        SELECT
+          MACHINE_ID,
+          ${SQL_COUNT_OK}  AS OK_PANELS,
+          ${SQL_COUNT_ERR} AS ERROR_COUNT,
+          MIN(DATE_TIME) AS FIRST_EVENT_TIME,
+          MAX(DATE_TIME) AS LAST_EVENT_TIME
+        FROM panel_base
+        GROUP BY MACHINE_ID
       ),
       lot_panel_stats AS (
         -- ★ สำหรับ fallback: %QR + Total ของแต่ละ LOT
         SELECT
-          COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
+          MACHINE_ID,
           NVL(LOT_ID, '(no lot)') AS LOT_ID,
-          SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS LOT_OK_PANELS,
-          SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS LOT_ERROR_COUNT,
+          ${SQL_COUNT_OK}  AS LOT_OK_PANELS,
+          ${SQL_COUNT_ERR} AS LOT_ERROR_COUNT,
           MIN(DATE_TIME) AS LOT_START_TIME,
           MAX(DATE_TIME) AS LOT_END_TIME,
           -- ★ ล่าสุดของ LOT นี้ (ใช้เพื่อเรียงลำดั้ง fallback)
           MAX(DATE_TIME) AS LOT_LAST_EVENT
-        FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-        WHERE DATE_TIME >= SYSDATE - 1440/1440
-          AND LOT_ID IS NOT NULL
-        GROUP BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID), NVL(LOT_ID, '(no lot)')
+        FROM panel_base
+        WHERE LOT_ID IS NOT NULL
+        GROUP BY MACHINE_ID, NVL(LOT_ID, '(no lot)')
       ),
       best_lot AS (
         -- ★ เลือก LOT ที่ดีที่สุดสำหรับแสดงผล %QR
@@ -376,16 +492,13 @@ panel_stats AS (
         COALESCE(BL.LOT_ID, E.LOT_ID) AS LOT_ID,
         COALESCE(BL.IS_FALLBACK_LOT, 0) AS IS_FALLBACK_LOT,
         M.SPEC_NAME     AS JOB_NAME,
-        -- ★ Total Sheet + %QR รวมทุก LOT ใน 24 ชม. (วิธีที่ 2)
-        P.OK_PANELS     AS TOTAL_SHEET,
-        P.ERROR_COUNT   AS ERROR_SHEET,
+        -- ★ [FIX] Total Sheet + %QR ของ "LOT ที่กำลังรัน" (เดิมรวมทุก LOT ใน 24 ชม. เลยไม่มีทางเป็นเลขกลม)
+        ${SQL_SHEET_OK}  AS TOTAL_SHEET,
+        ${SQL_SHEET_ERR} AS ERROR_SHEET,
         -- ★ LOT_START/END_TIME จาก best_lot (ถ้ามี) หรือ fallback จาก panel_stats
         COALESCE(BL.LOT_START_TIME, P.FIRST_EVENT_TIME, E.EVENT_TIME) AS LOT_START_TIME,
         COALESCE(BL.LOT_END_TIME, P.LAST_EVENT_TIME, E.EVENT_TIME)   AS LOT_END_TIME,
-        CASE
-          WHEN (P.OK_PANELS + P.ERROR_COUNT) = 0 OR P.OK_PANELS IS NULL THEN 0
-          ELSE ROUND(P.OK_PANELS * 100.0 / (P.OK_PANELS + P.ERROR_COUNT), 2)
-        END              AS PCT_QR,
+${SQL_PCT_QR}    AS PCT_QR,
         E.LAST_PANEL_ID,
         E.PANEL_TIME,
         A.ALARM_TEXT     AS ALARM_TEXT,
@@ -513,7 +626,8 @@ async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr)
           NVL(LOT_ID, '(no lot)') AS LOT_ID,
           PANEL_ID,
           DATE_TIME,
-          CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 0 ELSE 1 END AS IS_READ
+          CASE WHEN ${SQL_IS_UNREAD} THEN 0 ELSE 1 END AS IS_READ,
+${SQL_PANEL_FLAGS}
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
         WHERE DATE_TIME >= :start_date
           AND DATE_TIME <= :end_date
@@ -521,6 +635,7 @@ async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr)
              เดิมกรองอยู่ข้างนอก → inner query สแกน panel ของ "ทุกเครื่อง" ทั้งช่วงเวลา
              แล้วค่อย sort ทำให้วันย้อนหลัง (ข้อมูลเต็ม 24 ชม.) ช้าจนหมดเวลา */
           AND (SUB_EQP_ID = :machine1 OR (SUB_EQP_ID IS NULL AND MAIN_EQP_ID = :machine2))
+          AND ${SQL_IS_PANEL_EVENT}
         ORDER BY DATE_TIME DESC
       )
       WHERE 1 = 1
@@ -535,7 +650,18 @@ async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr)
     // group by LOT_ID
     var lotsMap = new Map()
     var totalOk = 0, totalErr = 0
+    // ★ [FIX] นับ "แผ่น" ไม่ใช่ "แถว" — กันแผ่นเดิมที่ถูกบันทึกซ้ำ (เช่น ...001001 กับ ...001001/0)
+    var seenPanels = new Set()
     rows.forEach(function(r) {
+      var isUnread = r.IS_READ !== 1
+      var isReal = r.IS_REAL === 1
+      // แผ่น dummy / jig / สแกนเพี้ยน → ไม่นับ (แต่ยังแสดงในลิสต์ พร้อม flag)
+      var isDummy = !isUnread && !isReal
+      // แผ่นงานจริงที่เคยเจอแล้วในช่วงเวลานี้ → ข้ามทั้งแถว
+      if (isReal) {
+        if (seenPanels.has(r.NORM_PANEL)) return
+        seenPanels.add(r.NORM_PANEL)
+      }
       var lotId = r.LOT_ID || '(no lot)'
       if (!lotsMap.has(lotId)) {
         lotsMap.set(lotId, { lot_id: lotId, panels: [], ok_count: 0, err_count: 0 })
@@ -547,9 +673,11 @@ async function fetchQrHistory(machineId, range, limit, offset, startStr, endStr)
       lot.panels.push({
         panel_id: r.PANEL_ID,
         time: r.DATE_TIME,
-        is_error: r.IS_READ !== 1
+        is_error: isUnread,
+        is_dummy: isDummy
       })
-      if (r.IS_READ !== 1) { lot.err_count++; totalErr++ } else { lot.ok_count++; totalOk++ }
+      if (isDummy) return
+      if (isUnread) { lot.err_count++; totalErr++ } else { lot.ok_count++; totalOk++ }
     })
     var lots = Array.from(lotsMap.values()).sort(function(a, b) {
       // sort by latest panel time desc
@@ -583,15 +711,22 @@ async function fetchQrDaily(machineId, range, startStr, endStr) {
     const sql = `
       SELECT * FROM (
         SELECT
-          TRUNC(DATE_TIME) AS QR_DAY,
-          COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MID,
-          COUNT(*) AS TOTAL_CNT,
-          SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS ERR_CNT,
-          SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS OK_CNT
-        FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-        WHERE DATE_TIME >= :1
-          AND DATE_TIME <= :2
-        GROUP BY TRUNC(DATE_TIME), COALESCE(SUB_EQP_ID, MAIN_EQP_ID)
+          QR_DAY,
+          MID,
+          ${SQL_COUNT_OK} + ${SQL_COUNT_ERR} AS TOTAL_CNT,
+          ${SQL_COUNT_ERR} AS ERR_CNT,
+          ${SQL_COUNT_OK}  AS OK_CNT
+        FROM (
+          SELECT
+            TRUNC(DATE_TIME) AS QR_DAY,
+            COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MID,
+${SQL_PANEL_FLAGS}
+          FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
+          WHERE DATE_TIME >= :1
+            AND DATE_TIME <= :2
+            AND ${SQL_IS_PANEL_EVENT}
+        )
+        GROUP BY QR_DAY, MID
       )
       WHERE MID = :3
       ORDER BY QR_DAY DESC
@@ -846,15 +981,22 @@ async function fetchQrSummary(range, startStr, endStr) {
     const r = startStr || endStr ? getDateRangeFromParams(startStr, endStr) : getDateRange(range)
     const sql = `
       SELECT
-        COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
-        MAX(SUB_EQP_NAME) AS MACHINE_NAME,
-        COUNT(*) AS TOTAL_CNT,
-        SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS ERR_CNT,
-        SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS OK_CNT
-      FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-      WHERE DATE_TIME >= :1
-        AND DATE_TIME <= :2
-      GROUP BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID)
+        MACHINE_ID,
+        MAX(MACHINE_NAME) AS MACHINE_NAME,
+        ${SQL_COUNT_OK} + ${SQL_COUNT_ERR} AS TOTAL_CNT,
+        ${SQL_COUNT_ERR} AS ERR_CNT,
+        ${SQL_COUNT_OK}  AS OK_CNT
+      FROM (
+        SELECT
+          COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
+          SUB_EQP_NAME AS MACHINE_NAME,
+${SQL_PANEL_FLAGS}
+        FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
+        WHERE DATE_TIME >= :1
+          AND DATE_TIME <= :2
+          AND ${SQL_IS_PANEL_EVENT}
+      )
+      GROUP BY MACHINE_ID
       ORDER BY TOTAL_CNT DESC
     `
     const result = await conn.execute(sql, [r.start, r.end], { outFormat: oracledb.OUT_FORMAT_OBJECT })
@@ -948,34 +1090,41 @@ async function fetchMachineHistory(machineId, dateStr) {
           AND DATE_TIME <= :ls_end
           AND (SUB_EQP_ID = :ls_machine1 OR (SUB_EQP_ID IS NULL AND MAIN_EQP_ID = :ls_machine2))
       ),
-      panel_stats AS (
+      -- ★ [FIX] normalize + คัด dummy/jig ครั้งเดียว (กฎเดียวกับ fetchLatestMachineStates)
+      panel_base AS (
         SELECT
           COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
-          SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS OK_PANELS,
-          SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS ERROR_COUNT,
-          MIN(DATE_TIME) AS FIRST_EVENT_TIME,
-          MAX(DATE_TIME) AS LAST_EVENT_TIME
+          LOT_ID,
+          DATE_TIME,
+${SQL_PANEL_FLAGS}
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
         WHERE DATE_TIME >= :ps_start
           AND DATE_TIME <= :ps_end
           AND (SUB_EQP_ID = :ps_machine1 OR (SUB_EQP_ID IS NULL AND MAIN_EQP_ID = :ps_machine2))
-        GROUP BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID)
+          AND ${SQL_IS_PANEL_EVENT}
+      ),
+      panel_stats AS (
+        SELECT
+          MACHINE_ID,
+          ${SQL_COUNT_OK}  AS OK_PANELS,
+          ${SQL_COUNT_ERR} AS ERROR_COUNT,
+          MIN(DATE_TIME) AS FIRST_EVENT_TIME,
+          MAX(DATE_TIME) AS LAST_EVENT_TIME
+        FROM panel_base
+        GROUP BY MACHINE_ID
       ),
       lot_panel_stats AS (
         SELECT
-          COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID,
+          MACHINE_ID,
           NVL(LOT_ID, '(no lot)') AS LOT_ID,
-          SUM(CASE WHEN PANEL_ID IS NOT NULL AND DBMS_LOB.GETLENGTH(PANEL_ID) > 0 AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) <> 'ERROR' AND UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) NOT LIKE '%NULL%' THEN 1 ELSE 0 END) AS LOT_OK_PANELS,
-          SUM(CASE WHEN PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%' THEN 1 ELSE 0 END) AS LOT_ERROR_COUNT,
+          ${SQL_COUNT_OK}  AS LOT_OK_PANELS,
+          ${SQL_COUNT_ERR} AS LOT_ERROR_COUNT,
           MIN(DATE_TIME) AS LOT_START_TIME,
           MAX(DATE_TIME) AS LOT_END_TIME,
           MAX(DATE_TIME) AS LOT_LAST_EVENT
-        FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-        WHERE DATE_TIME >= :lps_start
-          AND DATE_TIME <= :lps_end
-          AND (SUB_EQP_ID = :lps_machine1 OR (SUB_EQP_ID IS NULL AND MAIN_EQP_ID = :lps_machine2))
-          AND LOT_ID IS NOT NULL
-        GROUP BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID), NVL(LOT_ID, '(no lot)')
+        FROM panel_base
+        WHERE LOT_ID IS NOT NULL
+        GROUP BY MACHINE_ID, NVL(LOT_ID, '(no lot)')
       ),
       best_lot AS (
         SELECT MACHINE_ID, LOT_ID, LOT_OK_PANELS, LOT_ERROR_COUNT, LOT_START_TIME, LOT_END_TIME,
@@ -1000,14 +1149,12 @@ async function fetchMachineHistory(machineId, dateStr) {
         COALESCE(BL.LOT_ID, E.LOT_ID) AS LOT_ID,
         COALESCE(BL.IS_FALLBACK_LOT, 0) AS IS_FALLBACK_LOT,
         M.SPEC_NAME     AS JOB_NAME,
-        P.OK_PANELS     AS TOTAL_SHEET,
-        P.ERROR_COUNT   AS ERROR_SHEET,
+        -- ★ [FIX] ต่อ LOT (กฎเดียวกับ fetchLatestMachineStates)
+        ${SQL_SHEET_OK}  AS TOTAL_SHEET,
+        ${SQL_SHEET_ERR} AS ERROR_SHEET,
         COALESCE(BL.LOT_START_TIME, P.FIRST_EVENT_TIME, E.EVENT_TIME) AS LOT_START_TIME,
         COALESCE(BL.LOT_END_TIME, P.LAST_EVENT_TIME, E.EVENT_TIME)   AS LOT_END_TIME,
-        CASE
-          WHEN (P.OK_PANELS + P.ERROR_COUNT) = 0 OR P.OK_PANELS IS NULL THEN 0
-          ELSE ROUND(P.OK_PANELS * 100.0 / (P.OK_PANELS + P.ERROR_COUNT), 2)
-        END              AS PCT_QR,
+${SQL_PCT_QR}    AS PCT_QR,
         E.LAST_PANEL_ID,
         E.PANEL_TIME,
         A.ALARM_TEXT     AS ALARM_TEXT,
@@ -1045,8 +1192,7 @@ async function fetchMachineHistory(machineId, dateStr) {
     `
     const binds = {
       ls_start: r.start,  ls_end: r.end,  ls_machine1: machineId,  ls_machine2: machineId,   // latest_status
-      ps_start: r.start,  ps_end: r.end,  ps_machine1: machineId,  ps_machine2: machineId,   // panel_stats
-      lps_start: r.start, lps_end: r.end, lps_machine1: machineId, lps_machine2: machineId,  // lot_panel_stats
+      ps_start: r.start,  ps_end: r.end,  ps_machine1: machineId,  ps_machine2: machineId,   // panel_base (ใช้ร่วม panel_stats + lot_panel_stats)
       alm_start: r.start, alm_end: r.end, alm_machine1: machineId, alm_machine2: machineId,  // alarm join
       trc_start: r.start, trc_end: r.end, trc_machine1: machineId, trc_machine2: machineId,  // product/trace join
     }
@@ -1109,7 +1255,8 @@ async function poll() {
     for (const [id, curr] of latest) {
       const prev = snapshot[id]
       if (hasChanged(prev, curr)) {
-        changed.push({ ...curr, prev_status: prev?.status || null })
+        // ★ [FIX] เก็บ panel เดิมไว้ด้วย — ใช้ตัดสินว่า "แผ่นเปลี่ยนจริงไหม" ตอนเขียน qr-log
+        changed.push({ ...curr, prev_status: prev?.status || null, prev_panel_id: prev ? prev.last_panel_id : undefined })
       }
       snapshot[id] = { ...curr }
     }
@@ -1174,9 +1321,14 @@ async function poll() {
           product_id: m.product_id,
         })
         // ★ Auto-log QR ลงไฟล์ CSV (บันทึกทุก panel รวม null/error/empty)
+        /* ★ [FIX] เดิมเขียนทุกครั้งที่ hasChanged() เป็นจริง ซึ่งรวมกรณี status/alarm/mode เปลี่ยน
+           → แผ่นเดิมถูกเขียนซ้ำหลายแถวด้วย timestamp เดียวกัน (พบขยะ 713 แถว จาก 8,606)
+           ตอนนี้เขียนเฉพาะตอน panel เปลี่ยนจริงเท่านั้น */
         var panelIdForLog = m.last_panel_id || '';
-        var isErrorForLog = !panelIdForLog || String(panelIdForLog).indexOf('Error') === 0 || String(panelIdForLog).trim() === '' || /NULL/i.test(String(panelIdForLog));
-        appendQrLog(m.machine_id, m.lot_id, panelIdForLog, isErrorForLog, m.panel_time || m.event_time)
+        if (m.prev_panel_id === undefined || m.prev_panel_id !== m.last_panel_id) {
+          var isErrorForLog = !panelIdForLog || String(panelIdForLog).indexOf('Error') === 0 || String(panelIdForLog).trim() === '' || /NULL/i.test(String(panelIdForLog));
+          appendQrLog(m.machine_id, m.lot_id, panelIdForLog, isErrorForLog, m.panel_time || m.event_time)
+        }
       }
     }
 
@@ -1444,6 +1596,118 @@ const app = http.createServer(async (req, res) => {
     } catch (err) {
       console.error('[API] /api/qr-logs error:', err.message)
       res.writeHead(500); res.end('Server error')
+    }
+  } else if (req.url.startsWith('/api/machines/evidence-pack')) {
+    // ★ Vendor Evidence Pack — สร้าง PDF ให้ vendor เครื่องจักร
+    //   ยังไม่เคยทดสอบกับ Oracle จริง + ต้องรัน CREATE TABLE FAULT_ZONE_MAP ก่อน (oracle_setup.sql ข้อ 6)
+    try {
+      const u = new URL(req.url, 'http://localhost')
+      const machineId = u.searchParams.get('machine_id') || ''
+      const alarmText = u.searchParams.get('alarm_text') || null
+      const range = u.searchParams.get('range') || 'week'
+      const startStr = u.searchParams.get('start_date')
+      const endStr = u.searchParams.get('end_date')
+      if (!machineId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'machine_id required' }))
+        return
+      }
+      const r = startStr || endStr ? getDateRangeFromParams(startStr, endStr) : getDateRange(range)
+      const pool = await getPool()
+      const data = await evidencePack.fetchEvidencePackData(pool, {
+        machineId: machineId,
+        alarmText: alarmText,
+        start: r.start,
+        end: r.end,
+        label: r.label,
+        targetPct: QR_TARGET_PCT,
+        dayShiftStartHour: DAY_SHIFT_START_HOUR,
+      })
+      evidencePack.generatePdf(data, res, { plant: REPORT_PLANT, contact: REPORT_CONTACT, fontPath: PDF_FONT_PATH || undefined })
+    } catch (err) {
+      console.error('[API] /api/machines/evidence-pack error:', err.message)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: err.message }))
+      }
+    }
+  } else if (req.url.startsWith('/api/camera-map')) {
+    // ★ รายชื่อเครื่องที่มีกล้อง map ไว้ — frontend ใช้ตัดสินใจว่าจะโชว์ปุ่มดูกล้องไหม
+    try {
+      const cams = loadCameraMap()
+      sendJson(res, {
+        configured: !!NVR_CONFIG.host,
+        machines: Object.keys(cams),
+      })
+    } catch (err) {
+      console.error('[API] /api/camera-map error:', err.message)
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: err.message }))
+    }
+  } else if (req.url.startsWith('/api/camera-live')) {
+    // ★ Live view กล้อง (MJPEG ผ่าน ISAPI httpPreview) — proxy ผ่าน server กัน credential หลุดไป client
+    try {
+      const u = new URL(req.url, 'http://localhost')
+      const machineId = u.searchParams.get('machine_id') || ''
+      if (!NVR_CONFIG.host) {
+        res.writeHead(503, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'NVR ยังไม่ได้ตั้งค่า (NVR_HOST ว่างใน .env)' }))
+        return
+      }
+      const cam = loadCameraMap()[machineId]
+      if (!cam) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'ไม่มี mapping กล้องสำหรับเครื่องนี้ใน camera-map.json' }))
+        return
+      }
+      await hikvision.proxyLivePreview(NVR_CONFIG, cam.channel, res)
+    } catch (err) {
+      console.error('[API] /api/camera-live error:', err.message)
+      if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: err.message }))
+      }
+    }
+  } else if (req.url.startsWith('/api/camera-playback')) {
+    // ★ ดูวิดีโอย้อนหลัง ณ เวลาที่ระบุ (เช่น เวลาที่เกิด alarm) — ค้นหาคลิปที่ครอบคลุมเวลานั้นแล้วส่งไฟล์
+    try {
+      const u = new URL(req.url, 'http://localhost')
+      const machineId = u.searchParams.get('machine_id') || ''
+      const timeStr = u.searchParams.get('time') || ''
+      if (!NVR_CONFIG.host) {
+        res.writeHead(503, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'NVR ยังไม่ได้ตั้งค่า (NVR_HOST ว่างใน .env)' }))
+        return
+      }
+      const cam = loadCameraMap()[machineId]
+      if (!cam) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'ไม่มี mapping กล้องสำหรับเครื่องนี้ใน camera-map.json' }))
+        return
+      }
+      const target = timeStr ? new Date(timeStr) : new Date()
+      if (isNaN(target.getTime())) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'time ไม่ถูกต้อง ต้องเป็น ISO date string' }))
+        return
+      }
+      // ★ ค้นหาในช่วง ±5 นาทีรอบเวลาที่ต้องการ
+      const searchStart = new Date(target.getTime() - 5 * 60 * 1000)
+      const searchEnd = new Date(target.getTime() + 5 * 60 * 1000)
+      const matches = await hikvision.searchRecordings(NVR_CONFIG, cam.channel, searchStart, searchEnd)
+      const best = hikvision.pickBestMatch(matches, target)
+      if (!best) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'ไม่พบวิดีโอบันทึกในช่วงเวลานี้ (อาจถูกลบแล้วหรือ NVR ไม่ได้บันทึก)' }))
+        return
+      }
+      await hikvision.proxyPlaybackDownload(NVR_CONFIG, best.playbackUri, res)
+    } catch (err) {
+      console.error('[API] /api/camera-playback error:', err.message)
+      if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: err.message }))
+      }
     }
   } else {
     res.writeHead(404)

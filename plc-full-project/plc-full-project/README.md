@@ -77,6 +77,11 @@ PORT=3001
 # optional
 STALE_MINUTES=2
 ALLOWED_MACHINES=MC001,MC002
+# กล้อง NVR (ไม่ใส่ = ปิดฟีเจอร์ดูกล้อง)
+NVR_HOST=
+NVR_PORT=80
+NVR_USER=
+NVR_PASSWORD=
 ```
 
 ต้องเชื่อม VPN/เครือข่ายภายในก่อน ไม่งั้นเข้า Oracle ไม่ได้
@@ -108,6 +113,58 @@ http://localhost:3001/
 
 เลือก PA01 หรือ PA06 → เลือกชั้น (1F / 2F) → สถานะเครื่องจักรจะแสดงบนแผนที่
 
+## กล้อง (Hikvision NVR / iVMS-4200)
+
+★ ยังไม่ได้ทดสอบกับ NVR จริง (เขียนโดยไม่มี network access ไปหา NVR) — ต้องทดสอบกับเครื่องจริงก่อนใช้งาน
+
+### ตั้งค่า
+1. เติม `.env`: `NVR_HOST`, `NVR_PORT` (default 80), `NVR_USER`, `NVR_PASSWORD` (แนะนำสร้าง user read-only แยกใน iVMS-4200 ไม่ใช้ admin)
+2. เติม `backend/config/camera-map.json` — map `machine_id` (ต้องตรงกับใน `MACHINES_DB` ของ `index.html`) ไปยังเลข channel ใน NVR เช่น:
+   ```json
+   { "machines": { "AOI-PEP-01-L": { "channel": 3 } } }
+   ```
+3. ทดสอบต่อ NVR ก่อน (ไม่ต้องรัน server เต็ม):
+   ```bash
+   node tools/test-camera-conn.js                       # เช็ค auth
+   node tools/test-camera-conn.js --channel=3 --search   # เช็ค auth + ค้นหาคลิปย้อนหลัง 10 นาที
+   ```
+
+### วิธีใช้บนหน้าเว็บ
+- เปิดหน้าเครื่อง → ส่วน **Status History** ทุกแถวที่เป็น ⚠ ALARM จะมีปุ่ม **📹** ท้ายแถว → กดแล้วเปิดวิดีโอ ณ เวลาที่เกิด alarm นั้น
+- ในหน้าต่างกล้องมีปุ่มสลับ **🔴 ดูสด** / **⏪ ดูซ้ำช่วงเวลานี้** กด `Esc` เพื่อปิด
+- ปุ่ม 📹 จะโผล่**เฉพาะเครื่องที่ map ไว้ใน `camera-map.json`** เท่านั้น (เครื่องอื่นไม่เห็นปุ่ม ไม่รก UI)
+
+### วิธีทำงาน
+- **Live view**: ใช้ ISAPI `httpPreview` (MJPEG over HTTP) — เล่นได้ตรงในเบราว์เซอร์ ไม่ต้องแปลง RTSP/HLS. Server proxy ให้เพื่อไม่ให้ credential ของ NVR หลุดไปฝั่ง client
+- **Playback**: ใช้ ISAPI `ContentMgmt/search` หาคลิปที่ครอบคลุมเวลาที่ต้องการ แล้ว `ContentMgmt/download` ส่งไฟล์ผ่าน HTTP
+- ⚠️ **จุดที่ต้องเช็คกับเครื่องจริง**: ไฟล์ที่ได้จาก `ContentMgmt/download` อาจเป็น PS (MPEG-2 Program Stream) ไม่ใช่ MP4 ขึ้นกับ firmware — ถ้าเบราว์เซอร์เล่นไม่ได้ ต้อง remux ด้วย ffmpeg (เป็น dependency ใหม่ ต้องคุยกันก่อนเพิ่ม)
+- นาฬิกา NVR ต้องตรงกับเวลาเครื่อง server (ต่างกันเกิน ~5 วิ → กดดูตอน alarm จะได้ภาพผิดจังหวะ)
+
+## Vendor Evidence Pack
+
+★ ยังไม่ได้ทดสอบกับ Oracle จริง (เขียนโดยไม่มี network access ไปหา DB) — ต้องทดสอบก่อนใช้งาน
+
+### ก่อนใช้งาน
+1. รัน `CREATE TABLE FAULT_ZONE_MAP` ใน `backend/sql/oracle_setup.sql` ข้อ 6 (ยังไม่ได้รันบน DB จริง)
+2. กรอกข้อมูลตาราง `FAULT_ZONE_MAP` เอง (ดู `backend/data/fault-zone-map-seed.csv` ที่สร้างจาก `node tools/seed-fault-zone-map.js` และตัวอย่างร่างใน `backend/data/fault-zone-map-draft-example.csv`)
+3. เติม `.env`: `QR_TARGET_PCT` (default 99), `REPORT_PLANT`, `REPORT_CONTACT`, `DAY_SHIFT_START_HOUR` (default 8 = กะกลางวัน 08:00-20:00)
+
+### ใช้งาน
+เปิดหน้าเครื่อง → ในส่วน QR History กดปุ่ม **⬇PDF** (ใช้ช่วงวันที่เดียวกับที่เลือกไว้ใน QR History) → ระบบจะดึง fault ที่เกิดบ่อยสุดในช่วงนั้นมาสร้างรายงาน หรือระบุ fault เจาะจงเองผ่าน query param `alarm_text`
+
+### Machine Zone Diagram (ส่วน schematic ใน PDF)
+สร้าง**อัตโนมัติจากข้อมูลใน `FAULT_ZONE_MAP`** ไม่ต้องวาดรูปเอง — เป็นผังกล่องโซนเรียงซ้าย→ขวาตามทิศทางที่แผ่นวิ่ง พร้อมลูกศรเชื่อม โซนที่เกิด fault จะไฮไลต์สีแดง + มีเส้นชี้ลงมาที่ชื่อ fault
+
+- เรียงกล่องตามคอลัมน์ `ZONE_ORDER` (เลขน้อยอยู่ซ้าย แนะนำเว้นช่วง 10/20/30/40 จะได้แทรกทีหลังง่าย) ถ้าปล่อยเป็น 0 หมดจะเรียงตาม `ZONE_ID` แทน แต่ไม่สื่อทิศทางการไหลจริง
+- เพิ่มเครื่องรุ่นใหม่ = เพิ่มแถวใน `FAULT_ZONE_MAP` อย่างเดียว **ไม่ต้องแก้โค้ด**
+- ⚠️ **ไม่ใช่รูปเครื่องจริง** — เป็น diagram เชิงกระบวนการ ถ้าต้องการ side-elevation ที่เหมือนเครื่องจริง ต้องส่งรูปถ่าย/แบบ CAD มาให้วาดเพิ่ม
+
+### ข้อจำกัดที่รู้อยู่แล้ว
+- `machine_type` derive จาก `machine_id` อัตโนมัติ (ตัดเลขไลน์ + role ท้ายออก เช่น `DRL-DEP-03-M1` → `DRL-DEP`) — เครื่องรุ่นเดียวกันหลายไลน์ใช้ mapping เดียวกันได้
+- ถ้าไม่มีแถวใน `FAULT_ZONE_MAP` ตรงกับ fault นั้น → รายงานยังออกได้ปกติ แค่ไม่มี zone highlight/causes (degrade ตามที่ออกแบบไว้)
+- "Representative occurrence" เลือกจาก occurrence ที่มี alarm รอบข้าง (±60 วิ) เยอะที่สุดในช่วงเวลาที่เลือก
+- ฟอนต์ PDF ต้องครอบคลุมภาษาจีน/ไทย (default = Arial Unicode MS ที่มากับ Windows) ถ้าเครื่องที่ deploy ไม่มี ต้องตั้ง `PDF_FONT_PATH` ใน `.env` ไม่งั้นตัวอักษรจีนจะเพี้ยน
+
 ## API Endpoints
 
 | Endpoint | คำอธิบาย |
@@ -123,6 +180,10 @@ http://localhost:3001/
 | `GET /api/qr-summary?range=today` | สรุป % QR รวมทุกเครื่อง (สำหรับ sidebar) |
 | `GET /api/qr-export?machine_id=X&range=today` | Export ประวัติ QR เป็น CSV (download) |
 | `GET /api/qr-logs/qr-YYYY-MM-DD.csv` | ดาวน์โหลดไฟล์ QR log รายวัน |
+| `GET /api/camera-map` | รายชื่อเครื่องที่ map กล้องไว้ (frontend ใช้ตัดสินใจโชว์ปุ่ม 📹) |
+| `GET /api/camera-live?machine_id=X` | Live view กล้อง (MJPEG, proxy ผ่าน server) — ต้องมี mapping ใน `camera-map.json` |
+| `GET /api/camera-playback?machine_id=X&time=ISO` | วิดีโอย้อนหลัง ณ เวลาที่ระบุ (ค้นหาคลิป ±5 นาทีรอบเวลานั้น) |
+| `GET /api/machines/evidence-pack?machine_id=X&alarm_text=Y&range=week` | สร้าง PDF Vendor Evidence Pack — ไม่ระบุ `alarm_text` = auto เลือก fault ที่เกิดบ่อยสุดในช่วงเวลา รองรับ `start_date`/`end_date` แทน `range` ได้เหมือน endpoint อื่น |
 | `ws://localhost:3001/ws` | WebSocket สำหรับ real-time updates (push SNAPSHOT + CHANGES) |
 
 ค่า `range` ที่รองรับ: `today` (default) / `yesterday` / `week` (7 วัน) / `month` (30 วัน) หรือกำหนด `start_date` + `end_date` (YYYY-MM-DD) เอง
@@ -167,24 +228,54 @@ http://localhost:3001/
 ```
 plc-full-project/
 ├── backend/
-│   ├── eap-server.js          ← main entry point (HTTP + WS + Oracle poll)
-│   ├── .env                    ← Oracle credentials + config
-│   ├── oracle_setup.sql        ← SQL สร้างตาราง History + index + GRANT + purge job
-│   ├── test-conn.js            ← สคริปต์ทดสอบ Oracle connection
+│   ├── eap-server.js           ← main entry point (HTTP + WS + Oracle poll)
+│   ├── .env                    ← Oracle credentials + config (git-ignored)
 │   ├── start-server.bat        ← ตัวเริ่มเซิร์ฟเวอร์บน Windows
-│   ├── queries/
+│   ├── package.json
+│   │
+│   ├── lib/                    ← โมดูลที่ eap-server.js require เข้าไปใช้
+│   │   ├── hikvision.js        ← ISAPI client (digest auth + live/playback) สำหรับกล้อง NVR
+│   │   └── evidence-pack.js    ← Vendor Evidence Pack: query + PDF generation (pdfkit)
+│   │
+│   ├── config/
+│   │   └── camera-map.json     ← mapping machine_id → channel กล้องใน NVR (แก้ได้โดยไม่ต้อง restart)
+│   │
+│   ├── sql/                    ← SQL ที่รันมือ ไม่ได้ถูกเรียกจากโค้ด
+│   │   ├── oracle_setup.sql    ← สร้างตาราง History + index + GRANT + purge job
 │   │   └── index_recommendations.sql  ← SQL อ้างอิงสำหรับดึงสถานะเครื่อง + QR %
+│   │
+│   ├── tools/                  ← สคริปต์รันมือทั้งหมด (SELECT อย่างเดียว) — ดู tools/README.md
+│   │   ├── verify-panel-count.js      ← ตรวจการนับแผ่น: เทียบวิธีเดิม vs ปัจจุบัน รายเครื่อง
+│   │   ├── diagnose-panel-ids.js      ← ฟอร์แมต PANEL_ID / สาเหตุที่แผ่นซ้ำ
+│   │   ├── diagnose-event-types.js    ← ค่าของ CEID / PANELTYPE
+│   │   ├── diagnose-lot-id-gaps.js    ← ผลกระทบของแถวที่ LOT_ID ว่าง
+│   │   ├── test-conn.js               ← ทดสอบ Oracle connection
+│   │   ├── test-camera-conn.js        ← ทดสอบต่อ NVR
+│   │   ├── check-evidence-setup.js    ← ตรวจว่า Evidence Pack พร้อมใช้หรือยัง
+│   │   ├── list-alarm-codes.js        ← สำรวจรูปแบบ ALARM_TEXT ใน EAP_EQP_ALM
+│   │   ├── seed-fault-zone-map.js     ← สร้าง data/fault-zone-map-seed.csv ให้กรอก zone/severity/causes เอง
+│   │   ├── run-tools.bat              ← เมนูเลือกรัน (double-click ได้)
+│   │   └── output/             ← (auto, git-ignored) ผลลัพธ์ UTF-8 ของสคริปต์ข้างบน
+│   │
+│   ├── data/
+│   │   ├── fault-zone-map-draft-example.csv  ← ตัวอย่างการกรอก FAULT_ZONE_MAP
+│   │   └── fault-zone-map-seed.csv           ← (auto, git-ignored) สร้างจาก seed-fault-zone-map.js
+│   │
 │   └── qr-logs/                ← (auto, git-ignored) CSV รายวัน — สร้างอัตโนมัติตอนรัน
+│
 └── frontend/
     ├── index.html              ← Dashboard (HTML + CSS + JS ในไฟล์เดียว)
-    ├── th.js                   ← ภาษาไทย
-    ├── en.js                   ← ภาษาอังกฤษ
-    ├── ch.js                   ← ภาษาจีน
-    ├── PA01_1F.jpg             ← แผนผังชั้น 1 (PA01)
-    ├── PA01_2F.jpg             ← แผนผังชั้น 2 (PA01)
-    ├── PA06_1F.jpg             ← แผนผังชั้น 1 (PA06)
-    └── PA06_2F.jpg             ← แผนผังชั้น 2 (PA06)
+    ├── i18n/                   ← คำแปล โหลดผ่าน <script src="i18n/xx.js">
+    │   ├── th.js               ← ภาษาไทย
+    │   ├── en.js               ← ภาษาอังกฤษ
+    │   └── ch.js               ← ภาษาจีน
+    └── maps/                   ← แผนผังโรงงาน อ้างใน MACHINES_DB ว่า 'maps/PAxx_xF.jpg'
+        ├── PA01_1F.jpg / PA01_2F.jpg   ← PA01 ชั้น 1 / 2
+        └── PA06_1F.jpg / PA06_2F.jpg   ← PA06 ชั้น 1 / 2
 ```
+
+> เซิร์ฟเวอร์ serve ไฟล์ static แบบรวม subfolder อยู่แล้ว (`path.join(frontendDir, urlPath)`
+> พร้อม guard กัน path traversal) เพิ่มโฟลเดอร์ใหม่ใน `frontend/` ได้เลยโดยไม่ต้องแก้โค้ด
 
 ## การแก้ปัญหา
 
@@ -203,12 +294,12 @@ plc-full-project/
 
 ดู backend console log จะมีข้อความ `[MachineHistory] query <machineId> @ <date> took XXXms` บอกเวลาจริง
 - ถ้าเกิน 1 วินาที → อาจเป็นเพราะ Oracle ไม่มี index ที่เหมาะสม
-- แนะนำให้ DBA รันคำสั่งสร้าง index ตามที่อยู่ใน `backend/queries/index_recommendations.sql`
+- แนะนำให้ DBA รันคำสั่งสร้าง index ตามที่อยู่ใน `backend/sql/index_recommendations.sql`
 - หรือลอง `EXPLAIN PLAN FOR <query>` ดูว่า Oracle ใช้ index หรือเปล่า
 
 ตรวจสอบเชื่อม Oracle ได้จริง:
 ```bash
-node test-conn.js
+node tools/test-conn.js
 # หรือเปิด browser ไป http://localhost:3001/api/lot-report?days=1
 # ถ้าได้ JSON มี rows แปลว่า Oracle ติด
 ```

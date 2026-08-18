@@ -1,0 +1,9 @@
+machine_type,alarm_text,zone_id,zone_label,zone_order,description,severity,causes,typical_cause
+LIN-INNLDI,入料A无板报警,Z-FEED,Infeed conveyor,10,No panel present at infeed A,info,[],Upstream starvation or infeed sensor misdetection
+LIN-INNLDI,A机械手掉板报警,Z-ARM-A,Robot arm A gripper,20,Robot arm A dropped or mishandled panel,critical,[],Vacuum/gripper suction loss or worn gripper pads on arm A end-effector -- needs vendor inspection
+LIN-INNLDI,双片检测报警,Z-ARM-A,Robot arm A gripper,20,Double sheet feed detected,info,[],Static cling or improper panel separation -- may precede downstream scan NG if double sheet passes undetected
+LIN-INNLDI,出料B工位框扫码NG报警,Z-SCAN-B,Outfeed B QR scanner,30,Barcode/QR scan failed at outfeed B station,warning,"[""A机械手掉板报警""]",Robot arm gripper releases panel early or misaligned before reaching scan station causing skewed/out-of-frame panel at scanner
+LIN-INNLDI,出料A工位框扫码NG报警,Z-SCAN-A,Outfeed A QR scanner,30,Barcode/QR scan failed at outfeed A station,warning,"[""A机械手掉板报警""]",Same failure mode as outfeed B -- check scanner alignment and panel seating
+WIR-LDI,CCD 讀取NG重拍,Z-CCD,CCD vision reader,20,CCD image capture failed panel re-photographed,warning,[],Lighting or lens contamination or panel not settled in position when CCD triggered
+AOI-PEP,M855-板架1倒板报警,Z-RACK1,Panel rack 1,40,Rack 1 board toppled/collapsed alarm (vendor code M855),critical,[],"Rack 1 mechanical support failure or overloaded rack -- vendor's own fault code, severity already flagged severe by machine PLC"
+SMK-DEV,B工位框扫码NG报警,Z-SCAN-B,Station B QR scanner,30,Scan code NG at station B frame,warning,"[""机械手掉板报警""]",Panel frame misalignment or scanner lens obstruction at station B

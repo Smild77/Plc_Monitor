@@ -98,6 +98,7 @@ window.I18N_EN = {
   allData:'All',
   perPage100:'100 per page',
   exportCsv:'⬇ CSV',
+  vendorReport:'⬇ PDF',
   fullscreen:'⤢',
   loadMore:'⬇ Load more (100)',
   loadMore:'⬇ Load more (100)',
@@ -131,6 +132,15 @@ window.I18N_EN = {
   refreshBtn:'Refresh',
   closeBtn:'Close',
   exportCsvTitle:'Export CSV',
+  vendorReportTitle:'Vendor Evidence Pack (PDF)',
+  cameraTitle:'📹 CCTV Camera',
+  cameraLive:'🔴 Live',
+  cameraReplay:'⏪ Replay this moment',
+  cameraLoading:'Connecting to camera...',
+  cameraSearching:'Searching recorded footage...',
+  cameraError:'Cannot connect to camera — check NVR settings in backend/.env',
+  cameraFormatError:'Browser cannot play this video (NVR may return PS format) — needs server-side conversion',
+  cameraViewAt:'View camera at this alarm',
   fullscreenTitle:'Fullscreen',
 
   // ─── Admin mode ───

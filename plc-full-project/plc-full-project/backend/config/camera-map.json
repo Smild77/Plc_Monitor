@@ -1,0 +1,5 @@
+{
+  "_comment": "machine_id (ตรงกับ MACHINES_DB ใน frontend/index.html) → channel number ใน NVR (ดูเลข channel จาก iVMS-4200). เติมเองทีละเครื่องได้ ไม่ต้องครบ — เครื่องที่ไม่มีในนี้จะไม่มีปุ่มดูกล้อง",
+  "machines": {
+  }
+}

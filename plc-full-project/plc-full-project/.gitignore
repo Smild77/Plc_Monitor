@@ -36,3 +36,9 @@ backend/screenshots/
 backend/exports/
 # QR log CSV รายวัน (auto-generated ตอนรัน server — ไม่ต้อง track)
 backend/qr-logs/
+# ผลลัพธ์จาก seed-fault-zone-map.js — auto-generated จากข้อมูล Oracle จริง ไม่ต้อง track
+backend/data/fault-zone-map-seed.csv
+# ผลลัพธ์จากสคริปต์ใน backend/tools/ — เป็น snapshot ของข้อมูล ณ เวลาที่รัน ไม่ต้อง track
+backend/tools/output/
+# สำรองไฟล์ก่อนแก้ (ชั่วคราว — ลบได้หลัง commit)
+.backup-panelcount/

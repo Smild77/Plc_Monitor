@@ -96,6 +96,7 @@ window.I18N_CH = {
   allData:'全部',
   perPage100:'每页100',
   exportCsv:'⬇ CSV',
+  vendorReport:'⬇ PDF',
   fullscreen:'⤢',
   loadMore:'⬇ 加载更多 (100)',
   loadMore:'⬇ 加载更多 (100)',
@@ -129,6 +130,15 @@ window.I18N_CH = {
   refreshBtn:'刷新',
   closeBtn:'关闭',
   exportCsvTitle:'导出 CSV',
+  vendorReportTitle:'供应商证据报告 (PDF)',
+  cameraTitle:'📹 监控摄像头',
+  cameraLive:'🔴 实时',
+  cameraReplay:'⏪ 回放此时刻',
+  cameraLoading:'正在连接摄像头...',
+  cameraSearching:'正在搜索录像...',
+  cameraError:'无法连接摄像头 — 请检查 backend/.env 中的 NVR 设置',
+  cameraFormatError:'浏览器无法播放此视频（NVR 可能返回 PS 格式）— 需服务器端转换',
+  cameraViewAt:'查看此报警时刻的监控',
   fullscreenTitle:'全屏',
 
   // ─── Admin mode ───

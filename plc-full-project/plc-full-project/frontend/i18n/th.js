@@ -98,6 +98,7 @@ window.I18N_TH = {
   allData:'ทั้งหมด',
   perPage100:'หน้าละ 100',
   exportCsv:'⬇ CSV',
+  vendorReport:'⬇ PDF',
   fullscreen:'⤢',
   loadMore:'⬇ โหลดเพิ่ม (อีก 100)',
   loadMore:'⬇ โหลดเพิ่ม (อีก 100)',
@@ -131,6 +132,15 @@ window.I18N_TH = {
   refreshBtn:'รีเฟรช',
   closeBtn:'ปิด',
   exportCsvTitle:'ส่งออก CSV',
+  vendorReportTitle:'ดึงรายงานสำหรับ Vendor (PDF)',
+  cameraTitle:'📹 กล้องวงจรปิด',
+  cameraLive:'🔴 ดูสด',
+  cameraReplay:'⏪ ดูซ้ำช่วงเวลานี้',
+  cameraLoading:'กำลังเชื่อมต่อกล้อง...',
+  cameraSearching:'กำลังค้นหาคลิปย้อนหลัง...',
+  cameraError:'เชื่อมต่อกล้องไม่ได้ — เช็คการตั้งค่า NVR ใน backend/.env',
+  cameraFormatError:'เบราว์เซอร์เล่นไฟล์วิดีโอนี้ไม่ได้ (NVR อาจส่งมาเป็นฟอร์แมต PS) — ต้องแปลงฝั่ง server',
+  cameraViewAt:'ดูกล้องตอนเกิด alarm นี้',
   fullscreenTitle:'ขยายเต็มจอ',
 
   // ─── Admin mode ───

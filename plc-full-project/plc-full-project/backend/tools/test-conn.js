@@ -1,4 +1,5 @@
-require('dotenv').config();
+// ★ .env อยู่ที่ backend/ ไม่ใช่ tools/ — ระบุ path ตรงๆ จะได้รันจากที่ไหนก็ได้
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const oracledb = require('oracledb');
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 (async () => {

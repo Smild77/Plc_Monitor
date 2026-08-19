@@ -42,7 +42,20 @@
   font-variant-numeric:tabular-nums;
   font-feature-settings:"tnum" 1;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* Thai glyphs are not in Segoe UI, so Windows substitutes Leelawadee UI - which
+   ships with Windows 10/11 desktop but NOT with Windows Server, where Thai text
+   then fell back to something much uglier. Bundling one variable font (27 KB,
+   Thai codepoints only) makes Thai identical on every machine and needs no
+   internet. Latin keeps using Segoe UI, so nothing else about the page moves. */
+@font-face{
+  font-family:'Noto Sans Thai';
+  src:url('fonts/noto-sans-thai-var.woff2') format('woff2');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI Variable','Segoe UI','Noto Sans Thai',system-ui,-apple-system,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
 /* ═══════ Layout ═══════ */
 #app{display:flex;flex-direction:column;height:100vh}
@@ -838,7 +851,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .alert-item-msg{font-size:11px;color:var(--muted);line-height:1.35;word-break:break-word}
 .alert-item-time{font-size:10px;color:#555d65;margin-top:3px}
 
-.alert-toast{position:fixed;bottom:150px;right:24px;min-width:320px;max-width:440px;background:var(--surface);border:1px solid #F44336;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:2000;box-shadow:0 6px 28px rgba(248,81,73,.25);animation:toastIn .4s ease;cursor:pointer;font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif}
+.alert-toast{position:fixed;bottom:150px;right:24px;min-width:320px;max-width:440px;background:var(--surface);border:1px solid #F44336;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:2000;box-shadow:0 6px 28px rgba(248,81,73,.25);animation:toastIn .4s ease;cursor:pointer;font-family:'Segoe UI Variable','Segoe UI','Noto Sans Thai',system-ui,-apple-system,sans-serif}
 .alert-toast.severity-warning{border-color:#FFEB3B;box-shadow:0 6px 28px rgba(255,235,59,.15)}
 .alert-toast.severity-ok{border-color:#4CAF50;box-shadow:0 6px 28px rgba(63,185,80,.18)}
 .alert-toast.severity-down{border-color:#F44336;box-shadow:0 6px 28px rgba(248,81,73,.22)}
@@ -2080,7 +2093,9 @@ function openQrInNewTab() {
   html += '<title>QR History - ' + escH(machineName) + '</title>';
   html += '<style>';
   html += '*{box-sizing:border-box;margin:0;padding:0}';
-  html += 'body{background:#0d1117;color:#e6edf3;font-family:sans-serif;padding:20px}';
+  /* separate window, so it needs its own @font-face for Thai */
+  html += "@font-face{font-family:'Noto Sans Thai';src:url('fonts/noto-sans-thai-var.woff2') format('woff2');font-weight:100 900;font-display:swap}";
+  html += 'body{background:#0d1117;color:#e6edf3;font-family:\'Segoe UI\',\'Noto Sans Thai\',sans-serif;padding:20px}';
   html += 'h1{font-size:18px;margin-bottom:12px;color:#58a6ff}';
   html += 'h2{font-size:14px;margin:12px 0 6px;color:#8b949e}';
   html += 'table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px}';
@@ -4867,7 +4882,7 @@ function showBootError(msg){
   var el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#0d1117;color:#f85149;'
     + 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;'
-    + 'font-family:system-ui,sans-serif;text-align:center;padding:24px';
+    + 'font-family:\'Segoe UI\',\'Noto Sans Thai\',system-ui,sans-serif;text-align:center;padding:24px';
   el.innerHTML = '<div style="font-size:40px">⚠️</div>'
     + '<div style="font-size:18px;font-weight:600">โหลดผังเครื่องจักรไม่ได้</div>'
     + '<div style="font-size:13px;color:#8b949e;max-width:520px">' + msg + '</div>'

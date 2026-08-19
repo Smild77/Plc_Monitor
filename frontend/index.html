@@ -500,11 +500,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   0%{box-shadow:0 0 0 0 rgba(88,166,255,.55)}
   100%{box-shadow:0 0 0 10px rgba(88,166,255,0)}
 }
-/* เคารพการตั้งค่า "ลดการเคลื่อนไหว" ของเครื่องผู้ใช้ */
-@media (prefers-reduced-motion:reduce){
-  .mk-ping,.mi-ring-fill.sweep,.mi-kpi-value.bump,.mi-ring-text.bump,.mi-kpi.flash{animation:none}
-  .mi-ring-fill{transition:none}
-}
+/* จงใจไม่เคารพ prefers-reduced-motion — จอนี้ติดตั้งบนไลน์ผลิตและเครื่องที่ IT
+   เซ็ตมาให้มักปิด animation ไว้ที่ระดับ Windows ทำให้อนิเมชันหายทั้งหมด
+   ต้องการให้ทุกเครื่องเห็นเหมือนกัน จึงบังคับเล่นเสมอ */
 .mi-ring-text{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:var(--fs-lg);font-weight:800;line-height:1;letter-spacing:-.3px;
@@ -2855,9 +2853,9 @@ function animateNum(el, from, to, decimals, suffixHtml){
   if (!el) return;
   var dur = 650;
   var diff = to - from;
-  /* ค่าไม่เปลี่ยน หรือผู้ใช้ปิดแอนิเมชัน → เขียนค่าตรง ๆ */
-  if (Math.abs(diff) < Math.pow(10, -decimals) ||
-      (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches)) {
+  /* ค่าไม่เปลี่ยน → เขียนค่าตรง ๆ
+     (ไม่เช็ค prefers-reduced-motion แล้ว — บังคับให้นับเลขทุกเครื่อง) */
+  if (Math.abs(diff) < Math.pow(10, -decimals)) {
     el.innerHTML = fmtFixed(to, decimals) + (suffixHtml || '');
     return;
   }

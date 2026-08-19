@@ -1,0 +1,13 @@
+# ไฟล์ .bat/.cmd ต้องเป็น CRLF เท่านั้น — cmd.exe รันไฟล์ที่เป็น LF ไม่ได้
+# (เคยเป็นสาเหตุที่ double-click start-server.bat แล้วไม่ทำงาน)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ไฟล์ไบนารี — ห้าม git แปลง line ending
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.ttf binary

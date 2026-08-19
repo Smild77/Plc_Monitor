@@ -35,6 +35,7 @@ window.I18N_CH = {
   productId:'产品编号',
   lotQty:'料号',
   totalSheet:'总片数',
+  wholeDay:'全天合计',
   pctQr:'读码率',
   date:'日期',
   status:'状态',
@@ -163,10 +164,14 @@ window.I18N_CH = {
   qrFullscreenTitle:'QR 历史',
 
   // ─── Zone Export Modal ───
-  zoneExportTitle:'⬆ 导出区域预设 — 复制代码并粘贴到 index.html',
-  zoneExportDesc:'将此代码替换 index.html 中的 <code style="color:var(--accent)">ZONE_PRESETS</code> → 所有人将看到相同的区域',
-  zoneExportCopy:'📋 复制',
-  machineExportTitle:'⬆M 导出设备位置 — 复制代码并粘贴到 index.html',
+  zoneExportTitle:'💾 将布局保存到服务器',
+  zoneExportDesc:'点击<b>保存到服务器</b>将配置写入服务器文件 → 打开此页面的所有人都会立即看到相同的布局（不再需要修改 index.html）',
+  zoneExportCopy:'📋 复制 JSON',
+  layoutSaveBtn:'💾 保存到服务器',
+  layoutSaving:'保存中...',
+  layoutSaveOk:'已保存到服务器 ✓ 打开此页面的所有人都会看到新布局',
+  layoutSaveFail:'保存失败',
+  machineExportTitle:'💾 将设备位置保存到服务器',
   // ─── Hardcoded texts (converted to i18n) ───
   sqsTitle:'📊 % QR 汇总',
   dsTitle:'📊 每日汇总（3天）',
@@ -187,7 +192,7 @@ window.I18N_CH = {
   noQrHistory:'无 QR 历史数据',
   selectFactoryFirst:'请先选择工厂和楼层',
   noZonesYet:'暂无区域 — 请先绘制区域',
-  copiedToClipboard:'已复制！粘贴到 index.html 替换 ZONE_PRESETS',
+  copiedToClipboard:'已复制 JSON！',
   pressCtrlC:'请按 Ctrl+C 复制',
 
   // ─── Zone names (โซน) ───

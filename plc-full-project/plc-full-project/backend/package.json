@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "PLC Monitor Backend — Oracle DB + WebSocket real-time (standalone EAP server)",
   "main": "eap-server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node eap-server.js",
-    "dev": "nodemon eap-server.js"
+    "dev": "nodemon eap-server.js",
+    "check": "node --check eap-server.js && node --check lib/evidence-pack.js && node --check lib/hikvision.js",
+    "test": "node tools/smoke-test.js"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

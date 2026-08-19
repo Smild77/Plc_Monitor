@@ -40,5 +40,6 @@ backend/qr-logs/
 backend/data/fault-zone-map-seed.csv
 # ผลลัพธ์จากสคริปต์ใน backend/tools/ — เป็น snapshot ของข้อมูล ณ เวลาที่รัน ไม่ต้อง track
 backend/tools/output/
-# สำรองไฟล์ก่อนแก้ (ชั่วคราว — ลบได้หลัง commit)
-.backup-panelcount/
+# สำรองอัตโนมัติของไฟล์ผัง (server เขียนตอนกด "บันทึกลง Server") — ไม่ต้อง track
+backend/config/*.bak
+backend/config/*.tmp

@@ -55,7 +55,10 @@ function getLanIPs() {
 
 // ─── QR Code Log File (auto-write every new panel) ───────────
 const QR_LOG_DIR = path.join(__dirname, 'qr-logs')
-const QR_LOG_RETENTION_DAYS = 30
+const QR_LOG_RETENTION_DAYS = parseInt(process.env.QR_LOG_RETENTION_DAYS || '30')
+// ★ รอบการลบไฟล์เก่า — วันละครั้ง (ไม่ใช่แค่ตอน start)
+const QR_PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000
+let qrPurgeTimer = null
 
 // สร้างโฟลเดอร์ qr-logs ถ้ายังไม่มี
 try { if (!fs.existsSync(QR_LOG_DIR)) fs.mkdirSync(QR_LOG_DIR, { recursive: true }) } catch (e) { console.warn('[QRLog] mkdir failed:', e.message) }
@@ -106,6 +109,8 @@ const POLL_MINUTES = parseInt(process.env.POLL_MINUTES || '2')
 // ★ ระยะเวลาที่ถือว่าเครื่อง "ไม่มีข้อมูล" (NO_DATA) — ถ้าเครื่องไม่ active ในช่วงนี้ → สีเทาจาง
 // STALE_MINUTES ควร >= POLL_MINUTES (เพราะ DB query ใช้ POLL_MINUTES เป็น lookback)
 const STALE_MINUTES = parseInt(process.env.STALE_MINUTES || POLL_MINUTES)
+// ★ เวลาสูงสุดที่ยอมให้ query ของ poll ใช้ — เกินนี้ Oracle จะยกเลิก call และ watchdog จะปลดล็อก
+const POLL_TIMEOUT_MS = parseInt(process.env.POLL_TIMEOUT_MS || '15000')
 
 // ★ เทส: จำกัดเครื่อง (null = ทุกเครื่อง)
 const ALLOWED_MACHINES = process.env.ALLOWED_MACHINES
@@ -138,6 +143,106 @@ function loadCameraMap() {
     console.warn('[Camera] อ่าน camera-map.json ไม่ได้:', e.message)
     return {}
   }
+}
+
+/* ─── Layout: ผังเครื่องจักร + โซน ──────────────────────
+   ★ เดิมฝังเป็น MACHINES_DB / ZONE_PRESETS อยู่ใน index.html (ไฟล์ 257 KB)
+     แก้ตำแหน่งทีต้อง copy-paste โค้ดกลับมาแปะเองทุกครั้ง
+     ย้ายมาเป็น JSON แล้วให้ server เขียนให้ผ่าน POST — แก้บนหน้าเว็บได้จบในตัว
+   อ่านใหม่ทุกครั้งที่เรียก (ไฟล์เล็ก แก้แล้วไม่ต้อง restart) เหมือน camera-map.json */
+const MACHINES_PATH = path.join(__dirname, 'config', 'machines.json')
+const ZONES_PATH = path.join(__dirname, 'config', 'zones.json')
+
+function loadJsonFile(filePath, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  } catch (e) {
+    console.warn('[Layout] อ่าน ' + path.basename(filePath) + ' ไม่ได้:', e.message)
+    return fallback
+  }
+}
+
+// ★ เขียนแบบ atomic (เขียน .tmp แล้ว rename) + สำรองไฟล์เดิมไว้ 1 ชุด — กันไฟล์ผังพังแล้วข้อมูลหายหมด
+function saveJsonFile(filePath, data) {
+  const tmp = filePath + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', 'utf8')
+  try { if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + '.bak') } catch {}
+  fs.renameSync(tmp, filePath)
+}
+
+const MAX_BODY_BYTES = 2 * 1024 * 1024
+
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0
+    const chunks = []
+    req.on('data', (c) => {
+      size += c.length
+      if (size > MAX_BODY_BYTES) {
+        reject(new Error('body ใหญ่เกิน ' + MAX_BODY_BYTES + ' bytes'))
+        req.destroy()
+        return
+      }
+      chunks.push(c)
+    })
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'))
+      } catch (e) {
+        reject(new Error('JSON ไม่ถูกต้อง: ' + e.message))
+      }
+    })
+    req.on('error', reject)
+  })
+}
+
+// ★ ตรวจ factory/floor ก่อนเอาไปเป็น key — กันเขียนขยะลงไฟล์ผัง
+function validFactory(v) { return typeof v === 'string' && /^[A-Z0-9_-]{1,20}$/.test(v) }
+function validFloor(v) { return /^[0-9]{1,2}$/.test(String(v)) }
+function num100(v) { return typeof v === 'number' && isFinite(v) && v >= 0 && v <= 100 }
+
+function validateMachines(list) {
+  if (!Array.isArray(list)) throw new Error('machines ต้องเป็น array')
+  return list.map((m, i) => {
+    if (!m || typeof m.id !== 'string' || !m.id.trim()) throw new Error(`machines[${i}] ไม่มี id`)
+    if (!num100(m.x) || !num100(m.y)) throw new Error(`machines[${i}] (${m.id}) x/y ต้องเป็นตัวเลข 0-100`)
+    return {
+      id: m.id.trim(),
+      name: String(m.name == null ? m.id : m.name),
+      type: String(m.type == null ? '' : m.type),
+      zone: String(m.zone == null ? '' : m.zone),
+      x: m.x,
+      y: m.y,
+    }
+  })
+}
+
+function validateZones(list) {
+  if (!Array.isArray(list)) throw new Error('zones ต้องเป็น array')
+  return list.map((z, i) => {
+    if (!z || typeof z.name !== 'string' || !z.name.trim()) throw new Error(`zones[${i}] ไม่มี name`)
+    if (!Array.isArray(z.points) || z.points.length < 3) throw new Error(`zones[${i}] (${z.name}) ต้องมีอย่างน้อย 3 จุด`)
+    const points = z.points.map((p, j) => {
+      if (!p || !num100(p.x) || !num100(p.y)) throw new Error(`zones[${i}].points[${j}] x/y ต้องเป็นตัวเลข 0-100`)
+      return { x: p.x, y: p.y }
+    })
+    const out = { name: z.name.trim(), points }
+    // ★ เก็บ nameKey ไว้ ไม่งั้นโซนที่มีคำแปล i18n จะกลายเป็นข้อความตายตัวหลังเซฟทับ
+    if (typeof z.nameKey === 'string' && z.nameKey) out.nameKey = z.nameKey
+    if (typeof z.fill === 'string') out.fill = z.fill
+    if (typeof z.border === 'string') out.border = z.border
+    if (typeof z.labelRotate === 'number') out.labelRotate = z.labelRotate
+    return out
+  })
+}
+
+// อัปเดตเฉพาะ factory/floor ที่ส่งมา — ชั้นอื่นในไฟล์เดิมไม่ถูกแตะ
+function saveLayoutSection(filePath, factory, floor, items) {
+  const all = loadJsonFile(filePath, {})
+  if (!all[factory]) all[factory] = {}
+  all[factory][String(floor)] = items
+  saveJsonFile(filePath, all)
+  return all
 }
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT
@@ -412,6 +517,9 @@ async function fetchAllMachines() {
  async function fetchLatestMachineStates() {
   const p = await getPool()
   const conn = await p.getConnection()
+  /* ★ [FIX] ให้ Oracle ยกเลิก query เองถ้าเกินเวลา — ไม่งั้น connection ค้างอยู่ใน pool (poolMax=3)
+     ค้างครบ 3 เส้นเมื่อไหร่ API ทุกเส้นตายหมด */
+  conn.callTimeout = POLL_TIMEOUT_MS
   try {
     const sql = `
       WITH latest_status AS (
@@ -563,6 +671,12 @@ function normalizeRow(row) {
     // [LOT times] เวลาเริ่ม-จบ LOT ปัจจุบัน
     lot_start_time: row.LOT_START_TIME || null,
     lot_end_time:   row.LOT_END_TIME   || null,
+    /* ★ [Day totals] ยอดรวมทั้งวัน (ทุก LOT) — มีเฉพาะ /api/machine-history
+       โหมด live จะเป็น null → frontend ใช้ยอดต่อ LOT เหมือนเดิม */
+    day_total_sheet: row.DAY_TOTAL_SHEET != null ? (parseInt(row.DAY_TOTAL_SHEET) || 0) : null,
+    day_error_sheet: row.DAY_ERROR_SHEET != null ? (parseInt(row.DAY_ERROR_SHEET) || 0) : null,
+    day_pct_qr:      row.DAY_PCT_QR      != null ? (parseFloat(row.DAY_PCT_QR)  || 0) : null,
+    day_lot_count:   row.DAY_LOT_COUNT   != null ? (parseInt(row.DAY_LOT_COUNT) || 0) : null,
   }
 }
 
@@ -1139,6 +1253,12 @@ ${SQL_PANEL_FLAGS}
                  ) AS rn
           FROM lot_panel_stats
         ) WHERE rn = 1
+      ),
+      -- ★ [FIX] โหมดดูย้อนหลัง: ต้องรู้จำนวน LOT ทั้งวันด้วย
+      lot_count AS (
+        SELECT MACHINE_ID, COUNT(*) AS LOT_COUNT
+        FROM lot_panel_stats
+        GROUP BY MACHINE_ID
       )
       SELECT
         E.MACHINE_ID,
@@ -1155,6 +1275,14 @@ ${SQL_PANEL_FLAGS}
         COALESCE(BL.LOT_START_TIME, P.FIRST_EVENT_TIME, E.EVENT_TIME) AS LOT_START_TIME,
         COALESCE(BL.LOT_END_TIME, P.LAST_EVENT_TIME, E.EVENT_TIME)   AS LOT_END_TIME,
 ${SQL_PCT_QR}    AS PCT_QR,
+        /* ★ [FIX] ยอดรวม "ทั้งวัน" (ทุก LOT) — หน้าจอดูย้อนหลังใช้ตัวนี้ ไม่ใช่ยอดของ LOT เดียว */
+        NVL(P.OK_PANELS, 0)   AS DAY_TOTAL_SHEET,
+        NVL(P.ERROR_COUNT, 0) AS DAY_ERROR_SHEET,
+        CASE WHEN NVL(P.OK_PANELS, 0) + NVL(P.ERROR_COUNT, 0) = 0 THEN 0
+             ELSE ROUND(NVL(P.OK_PANELS, 0) * 100.0
+                        / (NVL(P.OK_PANELS, 0) + NVL(P.ERROR_COUNT, 0)), 2)
+        END AS DAY_PCT_QR,
+        NVL(LC.LOT_COUNT, 0)  AS DAY_LOT_COUNT,
         E.LAST_PANEL_ID,
         E.PANEL_TIME,
         A.ALARM_TEXT     AS ALARM_TEXT,
@@ -1166,6 +1294,8 @@ ${SQL_PCT_QR}    AS PCT_QR,
         ON P.MACHINE_ID = E.MACHINE_ID
       LEFT JOIN best_lot BL
         ON BL.MACHINE_ID = E.MACHINE_ID
+      LEFT JOIN lot_count LC
+        ON LC.MACHINE_ID = E.MACHINE_ID
       LEFT JOIN (
         SELECT COALESCE(SUB_EQP_ID, MAIN_EQP_ID) AS MACHINE_ID, ALARM_TEXT, ALARM_CATEGORY,
                DATE_TIME AS ALARM_TIME,
@@ -1220,6 +1350,9 @@ ${SQL_PCT_QR}    AS PCT_QR,
 let snapshot = {}
 let isPolling = false
 let pollTimer = null
+/* ★ [FIX] generation counter — ใช้ให้ watchdog ปลดล็อกได้อย่างปลอดภัย
+   และทิ้งผลลัพธ์ของรอบที่ timeout ไปแล้ว ไม่ให้ข้อมูลเก่ามาทับข้อมูลใหม่ */
+let pollGeneration = 0
 
 function hasChanged(prev, curr) {
   if (!prev) return true
@@ -1235,12 +1368,25 @@ function hasChanged(prev, curr) {
 async function poll() {
   if (isPolling) return
   isPolling = true
-  try {
-    // Timeout 15 วินาที — ถ้า query ช้าเกิน ให้ unlock
-    const timeout = setTimeout(() => { console.warn('[Poll] Timeout 15s — unlock') }, 15000)
+  const myGen = ++pollGeneration
 
+  /* ★ [FIX] Watchdog ตัวจริง — ของเดิมแค่ console.warn เฉย ๆ ไม่ได้ปลดล็อก isPolling
+     ผลคือถ้า Oracle ค้างครั้งเดียว poll รอบถัดไปจะไม่มีวันรัน dashboard ค้างเงียบ ๆ ตลอดไป */
+  const watchdog = setTimeout(() => {
+    if (pollGeneration === myGen && isPolling) {
+      console.warn(`[Poll] Timeout ${POLL_TIMEOUT_MS}ms — ปลดล็อกให้รอบถัดไปรันต่อ (ผลของรอบนี้จะถูกทิ้ง)`)
+      isPolling = false
+    }
+  }, POLL_TIMEOUT_MS)
+
+  try {
     const rows = await fetchLatestMachineStates()
-    clearTimeout(timeout)
+
+    // ★ รอบนี้ timeout ไปแล้วและมีรอบใหม่เข้ามาแทน → ทิ้งผลเก่า อย่าเอาไปทับ snapshot ใหม่
+    if (pollGeneration !== myGen) {
+      console.warn('[Poll] รอบที่ timeout ไปแล้วเพิ่งตอบกลับ — ทิ้งผลลัพธ์')
+      return
+    }
 
     // Group by machine_id — เอา event ล่าสุด
     const latest = new Map()
@@ -1344,7 +1490,9 @@ async function poll() {
   } catch (err) {
     console.error('[Poll] Error:', err.message)
   } finally {
-    isPolling = false
+    clearTimeout(watchdog)
+    // ★ ปลดล็อกเฉพาะเจ้าของ lock ปัจจุบัน — รอบที่ timeout ไปแล้วห้ามไปปลดล็อกของรอบใหม่
+    if (pollGeneration === myGen) isPolling = false
   }
 }
 
@@ -1389,31 +1537,79 @@ function sendJson(res, data) {
   }
 }
 
-const MIME = { '.html':'text/html; charset=utf-8', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.ico':'image/x-icon', '.js':'text/javascript', '.css':'text/css' }
+const MIME = {
+  '.html':'text/html; charset=utf-8', '.jpg':'image/jpeg', '.jpeg':'image/jpeg',
+  '.png':'image/png', '.webp':'image/webp', '.svg':'image/svg+xml', '.ico':'image/x-icon',
+  '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
+  '.json':'application/json; charset=utf-8', '.woff2':'font/woff2',
+}
+// ★ ไฟล์รูปแทบไม่เปลี่ยน → cache ยาว 1 วัน / ไฟล์โค้ดกับ html ให้ revalidate ทุกครั้ง (ETag ทำให้ได้ 304 ตัวเปล่า)
+const LONG_CACHE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg', '.ico', '.woff2'])
+
+/* ★ [PERF] serve ไฟล์แบบ stream + ETag
+   ของเดิมใช้ fs.readFileSync() → รูปแผนที่ 10 MB บล็อก event loop ทั้ง process ทุกครั้งที่มีคนโหลด
+   (ระหว่างนั้น WS broadcast กับ API อื่นหยุดหมด ยิ่งเปิดหลายจอยิ่งกระตุก)
+   และไม่มี cache header เลย → browser โหลดรูปใหม่แทบทุกครั้ง */
+async function serveStatic(req, res, filePath, mime) {
+  let stat
+  try {
+    stat = await fs.promises.stat(filePath)
+    if (!stat.isFile()) return false
+  } catch {
+    return false
+  }
+
+  const ext = path.extname(filePath).toLowerCase()
+  const etag = '"' + stat.size.toString(16) + '-' + Math.floor(stat.mtimeMs).toString(16) + '"'
+  // ★ ไฟล์ใน vendor/ ปักเวอร์ชันไว้แล้ว (เช่น html2canvas 1.4.1) → cache ยาวได้เหมือนรูป
+  const isVendor = filePath.startsWith(path.join(frontendDir, 'vendor') + path.sep)
+  const cacheControl = (LONG_CACHE_EXT.has(ext) || isVendor) ? 'public, max-age=86400' : 'no-cache'
+
+  // ไฟล์ไม่เปลี่ยนตั้งแต่ครั้งก่อน → ตอบ 304 ตัวเปล่า ไม่ต้องส่ง body
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, { 'ETag': etag, 'Cache-Control': cacheControl })
+    res.end()
+    return true
+  }
+
+  res.writeHead(200, {
+    'Content-Type': mime,
+    'Content-Length': stat.size,
+    'Cache-Control': cacheControl,
+    'ETag': etag,
+    'Last-Modified': stat.mtime.toUTCString(),
+  })
+
+  const stream = fs.createReadStream(filePath)
+  stream.on('error', (err) => {
+    console.error('[Static] stream error:', filePath, err.message)
+    res.destroy()
+  })
+  res.on('close', () => stream.destroy())
+  stream.pipe(res)
+  return true
+}
 
 const app = http.createServer(async (req, res) => {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 
-  const urlPath = req.url.split('?')[0]
+  let urlPath = req.url.split('?')[0]
+  // ★ decode ก่อน (รองรับชื่อไฟล์ที่มีช่องว่าง/อักษรไทย) — traversal ยังกันด้วย startsWith ข้างล่างเหมือนเดิม
+  try { urlPath = decodeURIComponent(urlPath) } catch {}
+
   if (urlPath === '/' || urlPath === '/index.html') {
-    try {
-      const html = fs.readFileSync(path.join(frontendDir, 'index.html'))
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-      res.end(html)
-      return
-    } catch {}
+    if (await serveStatic(req, res, path.join(frontendDir, 'index.html'), MIME['.html'])) return
   }
-  // Static assets (.jpg, .png, .js, .css)
+  // Static assets (.jpg, .png, .js, .css, ...)
   const ext = path.extname(urlPath).toLowerCase()
   if (MIME[ext]) {
     const filePath = path.join(frontendDir, urlPath)
-    if ((filePath === frontendDir || filePath.startsWith(frontendDir + path.sep)) && fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath)
-      res.writeHead(200, { 'Content-Type': MIME[ext] })
-      res.end(data)
-      return
+    if (filePath === frontendDir || filePath.startsWith(frontendDir + path.sep)) {
+      if (await serveStatic(req, res, filePath, MIME[ext])) return
     }
   }
 
@@ -1631,6 +1827,46 @@ const app = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: err.message }))
       }
     }
+  } else if (req.url.startsWith('/api/layout/machines') || req.url.startsWith('/api/layout/zones')) {
+    // ★ บันทึกผังจากโหมด Admin (Machine Drag / Zone Editor) ลงไฟล์ JSON ตรง ๆ
+    const isMachines = req.url.startsWith('/api/layout/machines')
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'ต้องใช้ POST' }))
+      return
+    }
+    try {
+      const body = await readJsonBody(req)
+      const factory = body.factory
+      const floor = body.floor
+      if (!validFactory(factory)) throw new Error('factory ไม่ถูกต้อง')
+      if (!validFloor(floor)) throw new Error('floor ไม่ถูกต้อง')
+
+      const items = isMachines ? validateMachines(body.machines) : validateZones(body.zones)
+      saveLayoutSection(isMachines ? MACHINES_PATH : ZONES_PATH, factory, floor, items)
+
+      console.log(`[Layout] บันทึก ${isMachines ? 'machines' : 'zones'} ${factory}/${floor}F — ${items.length} รายการ`)
+      sendJson(res, { ok: true, factory, floor: String(floor), count: items.length })
+    } catch (err) {
+      console.error('[API] /api/layout save error:', err.message)
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: err.message }))
+    }
+  } else if (req.url.startsWith('/api/layout')) {
+    // ★ ผังทั้งหมด — frontend โหลดตอน boot
+    try {
+      sendJson(res, {
+        machines: loadJsonFile(MACHINES_PATH, {}),
+        zones: loadJsonFile(ZONES_PATH, {}),
+        /* ★ เป้าหมาย %QR — frontend ใช้เป็นเกณฑ์สีเดียวกันทั้งหน้าจอ
+           (ของเดิม frontend hardcode ไว้คนละค่าในแต่ละที่: 100 บ้าง 95 บ้าง) */
+        qr_target_pct: QR_TARGET_PCT,
+      })
+    } catch (err) {
+      console.error('[API] /api/layout error:', err.message)
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: err.message }))
+    }
   } else if (req.url.startsWith('/api/camera-map')) {
     // ★ รายชื่อเครื่องที่มีกล้อง map ไว้ — frontend ใช้ตัดสินใจว่าจะโชว์ปุ่มดูกล้องไหม
     try {
@@ -1719,6 +1955,13 @@ const wss = new WebSocketServer({ server: app, path: '/ws' })
 
 wss.on('connection', (ws) => {
   clients.add(ws)
+  /* ★ [FIX] Heartbeat — ของเดิมลบ client ตอน 'close'/'error' เท่านั้น
+     ถ้าโน้ตบุ๊กพับจอหรือ WiFi หลุด TCP จะค้างครึ่งใบ ไม่มี event 'close' ยิงมาเลย
+     → connection ตายค้างใน Set ตลอด และ broadcast() ยิงใส่ทุก 3 วิ สะสมขึ้นเรื่อย ๆ
+     browser ตอบ pong ให้เองในระดับ protocol ไม่ต้องแก้ฝั่ง client */
+  ws.isAlive = true
+  ws.on('pong', () => { ws.isAlive = true })
+
   console.log(`[WS] Client connected — total: ${clients.size}`)
 
   // ส่ง snapshot ทันที
@@ -1737,19 +1980,41 @@ wss.on('connection', (ws) => {
   ws.on('error', () => clients.delete(ws))
 })
 
+// ★ ส่ง ping ทุก 30 วิ — client ที่ไม่ตอบ pong ภายในรอบถัดไปถือว่าตายแล้ว ตัดทิ้ง
+const WS_HEARTBEAT_MS = parseInt(process.env.WS_HEARTBEAT_MS || '30000')
+const wsHeartbeatTimer = setInterval(() => {
+  for (const ws of clients) {
+    if (ws.isAlive === false) {
+      console.log('[WS] Client ไม่ตอบ ping — ตัดทิ้ง')
+      clients.delete(ws)
+      try { ws.terminate() } catch {}
+      continue
+    }
+    ws.isAlive = false
+    try { ws.ping() } catch {
+      clients.delete(ws)
+      try { ws.terminate() } catch {}
+    }
+  }
+}, WS_HEARTBEAT_MS)
+wsHeartbeatTimer.unref()
+
 // ─── Start ────────────────────────────────────────────
 async function main() {
   console.log('=== EAP Monitor Server (Standalone) ===')
   console.log(`[Info] Poll: every ${POLL_INTERVAL_MS}ms | Lookback: ${POLL_MINUTES} min`)
-  // ★ ลบ QR log เก่ากว่า 30 วัน ตอน start
+  /* ★ [FIX] ลบ QR log เก่ากว่า 30 วัน — ของเดิมรันแค่ครั้งเดียวตอน start
+     server ที่เปิดทิ้งไว้เป็นเดือน ๆ จะไม่เคยลบไฟล์เก่าเลย แม้ตั้ง retention ไว้แล้ว
+     (ไฟล์วันที่งานเยอะ ~580 KB/วัน → ปีนึงราว 200 MB) */
   purgeOldQrLogs()
-  console.log('[QRLog] Auto-cleanup done (retention: 30 days)')
+  console.log(`[QRLog] Auto-cleanup done (retention: ${QR_LOG_RETENTION_DAYS} days)`)
+  qrPurgeTimer = setInterval(purgeOldQrLogs, QR_PURGE_INTERVAL_MS)
+  qrPurgeTimer.unref()
 
   // ★ Start server ก่อนเลย (ไม่ exit ถ้า Oracle ไม่ติด)
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT} (accepts all interfaces)`)
     console.log(`[Server] Frontend  : http://localhost:${PORT}/`)
-    console.log(`[Server] Test page: http://localhost:${PORT}/test-data.html`)
     console.log(`[Server] WebSocket  : ws://localhost:${PORT}/ws`)
     console.log(`[Server] Health    : http://localhost:${PORT}/health`)
     // ★ แสดง LAN IP ทั้งหมดที่คนอื่นสามารถใช้เข้าได้
@@ -1762,7 +2027,7 @@ async function main() {
       });
       console.log('========================================\n');
     } else {
-      console.log('\n→ เปิด http://localhost:' + PORT + '/test-data.html ใน browser\n');
+      console.log('\n→ เปิด http://localhost:' + PORT + '/ ใน browser\n');
     }
   })
 
@@ -1802,6 +2067,8 @@ async function main() {
 async function shutdown() {
   console.log('\n[Server] Shutting down...')
   if (pollTimer) clearInterval(pollTimer)
+  if (qrPurgeTimer) clearInterval(qrPurgeTimer)
+  clearInterval(wsHeartbeatTimer)
   for (const ws of clients) ws.close()
   if (pool) { await pool.close(10); pool = null }
   process.exit(0)

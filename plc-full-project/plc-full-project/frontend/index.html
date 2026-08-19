@@ -23,6 +23,24 @@
   --sidebar-w:200px;
   --header-h:52px;
   --popup-h:260px;
+  /* ★ Type scale — ของเดิมใช้ font-size กระจัดกระจาย 12 ขนาด (8-20px)
+     รวมเป็น token ชุดเดียวเพื่อให้ขนาดตัวอักษรทั้งแอปสอดคล้องกัน */
+  --fs-2xs:9px;
+  --fs-xs:10px;
+  --fs-sm:11px;
+  --fs-md:12px;
+  --fs-lg:13px;
+  --fs-xl:15px;
+  --fs-2xl:20px;
+}
+
+/* ★ ตัวเลขที่อัพเดตสด (ทุก ~3 วิ) ต้องใช้ความกว้างเท่ากันทุกหลัก
+   ไม่งั้นเลขจะขยับซ้าย-ขวาตลอดเวลาจนอ่านยาก */
+.info-field-value,.popup-field-value,.mi-kpi-value,.mi-kpi-sub,.mi-ring-text,
+.qr-lot-count,.qr-lot-pct,.qr-lot-time,.qr-day-stats,.qr-daily-table td,
+.sb-stat-row .sr-val,.sb-qr-bar-label,.badge,.hist-time{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -169,7 +187,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
 
 /* Map */
-#map{flex:1;position:relative;overflow:hidden;background:#060a0f;cursor:grab}
+/* ★ touch-action:none — ปิด gesture ของ browser (scroll/pinch หน้าเว็บ) เพื่อให้ pan/pinch ของแผนที่ทำงานเอง */
+#map{flex:1;position:relative;overflow:hidden;background:#060a0f;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 #map:active{cursor:grabbing}
 
 #zoom-wrap{position:absolute;transform-origin:0 0;transition:none;will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
@@ -199,6 +218,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .mk-c.no_data{background:#7a91b1;opacity:.7;box-shadow:0 0 0 2px rgba(255, 255, 255, 0.3);border-style:dashed}
 .mk-c.down{background:var(--down);box-shadow:0 0 0 2px rgba(248,81,73,.35),0 0 8px rgba(248,81,73,.25);animation:pulse-mk .9s ease-in-out infinite}
 .mk-alert{position:absolute;top:-6px;right:-6px;width:12px;height:12px;pointer-events:none;z-index:6}
+/* ★ [ลูกเล่น A] คลื่นกระเพื่อม — ยิงทุกครั้งที่เครื่องอ่าน QR แผ่นใหม่
+   เขียว = อ่านได้ / แดง = อ่านไม่ออก มองแผนที่แล้วรู้ทันทีว่าไลน์ไหนกำลังเดิน */
+.mk-ping{
+  position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;
+  border:2px solid var(--run);border-radius:50%;
+  pointer-events:none;z-index:4;
+  animation:mkPing .9s cubic-bezier(.2,.6,.35,1) forwards;
+}
+.mk-ping.err{border-color:var(--down)}
+.mk[data-id$="-L"] .mk-ping{border-radius:4px}
+@keyframes mkPing{
+  0%{transform:scale(.55);opacity:.95}
+  100%{transform:scale(3.4);opacity:0}
+}
 .mk-id-label{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.8);opacity:0;transition:opacity .2s}
 .mk.show-id .mk-id-label{opacity:1}
 
@@ -223,8 +256,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #zone-export-code{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:'Cascadia Code','Consolas','Courier New',monospace;font-size:11px;color:var(--text);overflow-y:auto;white-space:pre-wrap;word-break:break-all;min-height:200px;max-height:400px;user-select:text}
 #zone-export-close{align-self:flex-end;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px}
 #zone-export-close:hover{background:var(--accent);color:#fff}
-#zone-export-copy{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600}
+#zone-export-copy{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600}
 #zone-export-copy:hover{opacity:.85}
+#zone-export-save{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600}
+#zone-export-save:hover{opacity:.85}
+#zone-export-save:disabled{opacity:.5;cursor:default}
 
 /* ═══════ Camera modal (NVR live / playback) ═══════ */
 #camera-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99998;padding:20px;align-items:center;justify-content:center}
@@ -365,13 +401,111 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .popup-machine-name{font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:6px;border-bottom:1px solid var(--border);word-break:break-word}
 .popup-machine-name img{width:20px;height:20px}
 .popup-fields{display:flex;flex-direction:column;gap:6px;flex:1}
-.popup-field{display:flex;flex-direction:column;gap:1px;min-width:0}
-.popup-field-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.popup-field-value{font-size:12px;font-weight:700;color:var(--text);word-break:break-word;white-space:normal;line-height:1.35}
+.popup-field{
+  display:flex;flex-direction:column;gap:2px;min-width:0;
+  padding:6px 8px;border:1px solid var(--border);border-radius:6px;
+  background:rgba(33,38,45,.4);
+}
+.popup-field.span2{grid-column:1/-1}
+.popup-field-label{font-size:var(--fs-2xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.popup-field-value{font-size:var(--fs-md);font-weight:700;color:var(--text);word-break:break-word;white-space:normal;line-height:1.35}
+.popup-field-value.mono{font-family:'Cascadia Code','Consolas','Courier New',monospace;letter-spacing:.5px}
+.popup-field-value.is-alarm{color:var(--down)}
+.popup-field-value.is-cat{color:var(--idle)}
+.popup-field-value.is-pid{color:var(--accent)}
+.popup-field-value.is-muted{color:var(--muted)}
+.popup-field-value.is-time{font-size:var(--fs-sm)}
 .popup-field-value.status-run{color:var(--run)}
 .popup-field-value.status-idle{color:var(--idle)}
 .popup-field-value.status-down{color:var(--down)}
 .popup-field-value.status-no_data{color:#6e7681}
+
+/* ═══════ Machine Info — KPI hero cards + field tiles ═══════ */
+/* ★ ของเดิมเป็นรายการเรียงลงมาคอลัมน์เดียว 11 บรรทัด ต้องเลื่อนหาทีละอัน
+   เปลี่ยนเป็น: การ์ด KPI 3 ใบด้านบน (สถานะ / %QR / จำนวนชิ้นงาน) + ฟิลด์ที่เหลือเป็น grid 2 คอลัมน์ */
+.mi-hero{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+  gap:8px;
+}
+.mi-kpi{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 8px;min-width:0;text-align:center;
+  border:1px solid var(--border);border-radius:8px;
+  background:linear-gradient(180deg,var(--surface2),rgba(33,38,45,.35));
+  transition:border-color .25s ease,background .25s ease;
+}
+.mi-kpi-label{
+  font-size:var(--fs-2xs);font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--muted);line-height:1.2;
+}
+.mi-kpi-value{
+  font-size:var(--fs-2xl);font-weight:800;line-height:1.15;color:var(--text);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.mi-kpi-sub{font-size:var(--fs-2xs);font-weight:600;color:var(--muted);line-height:1.3;min-height:12px}
+.mi-kpi-status{font-size:var(--fs-xl);display:flex;align-items:center;gap:5px}
+.mi-kpi-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.mi-kpi-status.status-run{color:var(--run)}
+.mi-kpi-status.status-idle{color:var(--idle)}
+.mi-kpi-status.status-down{color:var(--down)}
+.mi-kpi-status.status-no_data{color:#6e7681}
+/* จุดสถานะกะพริบเฉพาะตอน RUN / DOWN — ให้รู้ว่าข้อมูลยังสด */
+.mi-kpi-status.status-run .mi-kpi-dot,
+.mi-kpi-status.status-down .mi-kpi-dot{animation:blink 1.6s ease-in-out infinite}
+/* สีขอบการ์ดตามสถานะ — เห็นสถานะได้ตั้งแต่ยังไม่อ่านตัวอักษร */
+.mi-kpi.is-run{border-color:rgba(63,185,80,.45);background:linear-gradient(180deg,var(--run-bg),rgba(13,40,24,.2))}
+.mi-kpi.is-idle{border-color:rgba(210,153,34,.45);background:linear-gradient(180deg,var(--idle-bg),rgba(39,29,7,.2))}
+.mi-kpi.is-down{border-color:rgba(248,81,73,.5);background:linear-gradient(180deg,var(--down-bg),rgba(45,15,14,.2))}
+.mi-kpi.is-no_data{border-style:dashed;opacity:.75}
+
+/* วงแหวน %QR (แทนแท่ง progress สูง 5px ของเดิม) */
+.mi-ring{position:relative;width:60px;height:60px;flex-shrink:0}
+.mi-ring svg{display:block;transform:rotate(-90deg)}
+.mi-ring-track{stroke:var(--border)}
+.mi-ring-fill{
+  stroke-linecap:round;
+  transition:stroke-dashoffset .55s cubic-bezier(.25,.1,.25,1),stroke .3s ease;
+}
+/* ★ [ลูกเล่น C] เปิด popup แล้ววงแหวนกวาดจาก 0 ไปถึงค่าจริง
+   (transition ด้านบนทำงานแค่ตอน "ค่าเปลี่ยน" ไม่ทำงานตอนวาดครั้งแรก) */
+.mi-ring-fill.sweep{animation:ringSweep .75s cubic-bezier(.25,.1,.25,1) both}
+@keyframes ringSweep{
+  from{stroke-dashoffset:var(--ring-circ)}
+  to{stroke-dashoffset:var(--ring-offset)}
+}
+/* ★ [ลูกเล่น B] ค่าเปลี่ยน → เรืองแสงแวบหนึ่ง */
+.mi-kpi-value.bump,.mi-ring-text.bump{animation:valueBump .7s ease-out}
+@keyframes valueBump{
+  0%{transform:scale(1)}
+  25%{transform:scale(1.14);filter:drop-shadow(0 0 8px currentColor)}
+  100%{transform:scale(1)}
+}
+.mi-kpi.flash{animation:kpiFlash .8s ease-out}
+@keyframes kpiFlash{
+  0%{box-shadow:0 0 0 0 rgba(88,166,255,.55)}
+  100%{box-shadow:0 0 0 10px rgba(88,166,255,0)}
+}
+/* เคารพการตั้งค่า "ลดการเคลื่อนไหว" ของเครื่องผู้ใช้ */
+@media (prefers-reduced-motion:reduce){
+  .mk-ping,.mi-ring-fill.sweep,.mi-kpi-value.bump,.mi-ring-text.bump,.mi-kpi.flash{animation:none}
+  .mi-ring-fill{transition:none}
+}
+.mi-ring-text{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-lg);font-weight:800;line-height:1;letter-spacing:-.3px;
+}
+.mi-ring-text .mi-ring-unit{font-size:var(--fs-2xs);font-weight:700;opacity:.75;margin-left:1px}
+
+/* ป้ายบอกว่ายอดในการ์ดเป็นยอด "รวมทั้งวัน" (โหมดดูย้อนหลัง) */
+.mi-daynote{
+  grid-column:1/-1;display:flex;align-items:center;gap:5px;
+  padding:4px 8px;border-radius:6px;
+  background:var(--idle-bg);border:1px solid rgba(210,153,34,.4);
+  color:var(--idle);font-size:var(--fs-2xs);font-weight:700;
+}
+.mi-daynote::before{content:'📅'}
 
 /* Right column: histories (each section independently scrollable) */
 .popup-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;overflow:hidden;border-left:1px solid var(--border);padding-left:12px}
@@ -563,7 +697,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
   color:var(--accent);padding-bottom:4px;border-bottom:1px solid var(--border);
 }
-.info-fields{display:flex;flex-direction:column;gap:6px}
+.info-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start}
+.info-fields>.mi-loading-overlay,.info-fields>.mi-no-data{grid-column:1/-1}
 .info-field{display:flex;flex-direction:column;gap:2px}
 .info-field-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .info-field-value{font-size:13px;font-weight:700;color:var(--text);word-break:break-word;line-height:1.35}
@@ -728,15 +863,67 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .kh-key{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;color:var(--text);font-family:'Cascadia Code','Consolas','Courier New',monospace}
 
 /* Mobile */
+/* ═══════ MOBILE / TABLET ═══════ */
 @media(max-width:768px){
   :root{--sidebar-w:260px;--popup-h:380px}
-  #sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;z-index:50}
+  #sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;z-index:50;box-shadow:4px 0 24px rgba(0,0,0,.5)}
   #sidebar.collapsed{transform:translateX(-100%);margin-left:0;opacity:1;pointer-events:auto}
   /* Mobile: info-panel becomes full-width bottom sheet */
   #info-panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:60vh;border-left:none;border-top:1px solid var(--border);z-index:50}
   .info-panel-body{max-height:calc(60vh - 40px)}
   #mini-map{width:120px;height:75px}
   #zoom-btns{bottom:100px}
+
+  /* ★ เป้าแตะอย่างน้อย 44px ตามแนวทาง touch target — ปุ่มเดิมเล็กเกินกดพลาดบ่อย */
+  #zoom-btns button{width:44px;height:44px;font-size:18px}
+  .hamburger{width:44px;height:44px}
+  #header{padding:0 10px;gap:6px}
+  .hinfo{font-size:11px}
+  /* modal ต่าง ๆ ให้เต็มความกว้างจอ ไม่ให้ล้น */
+  #zone-export-box,#camera-box{max-width:100%;width:calc(100% - 20px);max-height:88vh}
+  #admin-login-box{min-width:0;width:calc(100% - 48px);max-width:340px}
+  #zone-export-code{font-size:10px;max-height:46vh}
+  /* tooltip แบบ hover ไม่มีความหมายบนจอสัมผัส */
+  #tooltip{display:none!important}
+}
+
+/* ═══════ มือถือจอแคบ (≤480px) ═══════ */
+@media(max-width:480px){
+  :root{--sidebar-w:min(280px,86vw);--header-h:48px}
+  html,body{font-size:12px}
+  /* ซ่อนของที่กินที่จนบังแผนที่ — ต้องคลุม .show ด้วย ไม่งั้น #mini-map.show ชนะด้วย specificity */
+  #mini-map,#mini-map.show{display:none}
+  #map-legend{font-size:9px;padding:6px;bottom:6px;left:6px;max-width:44vw}
+  #zoom-btns{bottom:auto;top:calc(var(--header-h) + 8px);right:8px}
+  #info-panel{max-height:72vh}
+  .info-panel-body{max-height:calc(72vh - 40px)}
+  /* header: เหลือเฉพาะของจำเป็น */
+  .vdiv,.hinfo{display:none}
+  #header{padding:0 8px}
+  /* แถบสรุปสถานะ RUN/IDLE/DOWN: บีบให้พอดีจอแคบแทนที่จะดันของอื่นตกขอบ */
+  .badges{gap:4px}
+  .badge{padding:2px 5px;font-size:10px}
+  #langSelect{padding:2px 4px;font-size:10px}
+  #last-update{display:none}
+  #conn span{display:none}   /* เหลือแค่จุดสีบอกสถานะเชื่อมต่อ */
+  /* ตารางกว้าง ๆ ให้เลื่อนในกล่องตัวเอง ไม่ดันหน้าจอ */
+  .info-panel-body table{display:block;overflow-x:auto;white-space:nowrap}
+}
+
+/* ═══════ มือถือแนวนอน (จอเตี้ย) ═══════ */
+@media(max-height:500px) and (orientation:landscape){
+  :root{--header-h:42px}
+  #info-panel{max-height:92vh}
+  .info-panel-body{max-height:calc(92vh - 40px)}
+  #map-legend{display:none}
+  #mini-map,#mini-map.show{display:none}
+  #zoom-btns{bottom:auto;top:calc(var(--header-h) + 6px)}
+}
+
+/* ★ อุปกรณ์สัมผัสล้วน (ไม่มีเมาส์) — เอฟเฟกต์ hover ทำให้ค้างสถานะหลังแตะ */
+@media(hover:none){
+  #tooltip{display:none!important}
+  .mk{-webkit-tap-highlight-color:transparent}
 }
 </style>
 </head>
@@ -1094,13 +1281,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <div id="zone-export-modal" onclick="if(event.target===this)closeZoneExport()">
     <div id="zone-export-box">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 data-i18n="zoneExportTitle">⬆ Export Zone Presets — คัดลอกโค้ดไปวางใน index.html</h3>
+        <!-- ★ ไม่ใส่ data-i18n เพราะ showLayoutModal() ตั้ง title เองตามชนิดที่กำลังบันทึก (zones / machines)
+             ถ้าใส่ไว้ setLang() จะเขียนทับกลับเป็นหัวข้อ zone ตอนสลับภาษา -->
+        <h3>💾 บันทึกผังลง Server</h3>
         <button id="zone-export-close" onclick="closeZoneExport()">×</button>
       </div>
-      <div style="font-size:11px;color:var(--muted)" data-i18n-html="zoneExportDesc">วางโค้ดนี้แทนที่ <code style="color:var(--accent)">ZONE_PRESETS</code> ใน index.html → ทุกคนจะเห็นโซนเดียวกัน</div>
+      <div style="font-size:11px;color:var(--muted)" data-i18n-html="zoneExportDesc">กด <b>บันทึกลง Server</b> เพื่อเขียนลงไฟล์ config บนเครื่อง server → ทุกคนที่เปิดหน้านี้จะเห็นผังเดียวกันทันที (ไม่ต้องแก้ index.html แล้ว)</div>
       <div id="zone-export-code"></div>
+      <div id="zone-export-status" style="font-size:11px;min-height:14px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="zone-export-copy" onclick="copyZoneExport()" data-i18n="zoneExportCopy">📋 คัดลอก</button>
+        <button id="zone-export-copy" onclick="copyZoneExport()" data-i18n="zoneExportCopy">📋 คัดลอก JSON</button>
+        <button id="zone-export-save" onclick="saveLayoutFromModal()" data-i18n="layoutSaveBtn">💾 บันทึกลง Server</button>
       </div>
     </div>
   </div>
@@ -1188,7 +1379,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <div class="kh-item"><span class="kh-key">?</span> <span data-i18n="kbThis">ปุ่มลัดนี้</span></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- ★ html2canvas เก็บไว้ในโปรเจกต์เอง (เดิมโหลดจาก cdn.jsdelivr.net)
+     เครื่องหน้างานไม่มีเน็ต → ปุ่มถ่ายภาพ (P) จะได้ PNG เปล่าที่เขียนว่า "html2canvas not loaded"
+     ตอนนี้ใช้ได้ในเครือข่ายภายในล้วน ตรงกับที่ README บอกว่าไม่ต้องใช้เน็ต -->
+<script src="vendor/html2canvas.min.js"></script>
 
 <!-- ★ i18n translation files — แก้ไขคำแปลในไฟล์เหล่านี้โดยตรง -->
 <script src="i18n/th.js"></script>
@@ -1330,160 +1524,11 @@ var FACTORIES = [
   {id:'PA07', name:'PA07', label:'PA07 Factory',  floors:2, mapImg:['maps/PA07_1F.jpg','maps/PA07_2F.jpg'], active:false},
 ];
 
-var MACHINES_DB = {
-  'PA01': {
-    1: [
-      {id:'AOI-OUTAOI-01-L',name:'外层AOI（脱机）#1',type:'L',zone:'Zone-N',x:92.4,y:79.4},
-      {id:'AOI-PEP-01-L',name:'内层PE冲孔（4CCD）投板机#1',type:'L',zone:'Zone-K',x:83,y:79.1},
-      {id:'AOI-PEP-01-UL',name:'内层PE冲孔（4CCD）收板机#1',type:'UL',zone:'Zone-B',x:83,y:74.7},
-      {id:'AOI-RESAOI-01-L',name:'塞孔AOI投板机#1',type:'L',zone:'Zone-N',x:62.2,y:75.3},
-      {id:'AOI-RESAOI-01-UL',name:'塞孔AOI收板机#1',type:'UL',zone:'Zone-N',x:65.8,y:74.9},
-      {id:'DRL-INS-01-L',name:'DRL-INS-01-L',type:'L',zone:'Zone-N',x:36.3,y:25.1},
-      {id:'DRL-INS-01-UL',name:'钻孔验孔#1',type:'UL',zone:'Zone-N',x:36.2,y:20},
-      {id:'ELC-DEP-01-L',name:'电镀水平D+P#1-投板机',type:'L',zone:'Zone-M',x:51.7,y:57.6},
-      {id:'ELC-DEP-01-UL',name:'电镀水平D+P#1-收板机',type:'UL',zone:'Zone-K',x:51.4,y:14.3},
-      {id:'ELC-INS-01-L',name:'电镀验孔机投板机#1',type:'L',zone:'Zone-I',x:62.5,y:78.4},
-      {id:'ELC-INS-01-UL',name:'电镀验孔机收板机#1',type:'UL',zone:'Zone-J',x:65.9,y:78.4},
-      {id:'ELC-PUL-01-L',name:'电镀VCP脉冲投板机#1',type:'L',zone:'Zone-N',x:55.4,y:14.4},
-      {id:'ELC-PUL-01-UL',name:'电镀VCP脉冲收板机#1',type:'UL',zone:'Zone-N',x:55.4,y:65.5},
-      {id:'ELC-PUL-02-L',name:'电镀VCP脉冲投板机#2',type:'L',zone:'Zone-N',x:58.2,y:14.4},
-      {id:'ELC-PUL-02-UL',name:'ELC-PUL-02-UL',type:'UL',zone:'Zone-N',x:58.2,y:66.6},
-      {id:'ELC-RED-01-L',name:'电镀减铜线投板机#1',type:'L',zone:'Zone-E',x:67.3,y:52.2},
-      {id:'ELC-RED-01-UL',name:'电镀减铜线收板机#1',type:'UL',zone:'Zone-N',x:67.2,y:66.5},
-      {id:'ELC-RED-02-L',name:'ELC-RED-02-L',type:'L',zone:'Zone-N',x:63.8,y:50.9},
-      {id:'ELC-RED-02-UL',name:'ELC-RED-02-UL',type:'UL',zone:'Zone-N',x:63.7,y:65.8},
-      {id:'ELC-SES-01-L',name:'电镀SES线#1',type:'L',zone:'Zone-N',x:66.4,y:14.9},
-      {id:'ELC-SES-01-UL',name:'电镀SES线#1',type:'UL',zone:'Zone-N',x:66.4,y:46.5},
-      {id:'ELC-TRE-01-L',name:'电镀前处理投板机#1',type:'L',zone:'Zone-N',x:43.6,y:36.4},
-      {id:'ELC-TRE-01-UL',name:'电镀前处理收板机#1',type:'UL',zone:'Zone-N',x:43.5,y:47.6},
-      {id:'ELC-TRE-02-L',name:'ELC-TRE-02-L',type:'L',zone:'Zone-N',x:46,y:34.9},
-      {id:'ELC-TRE-02-UL',name:'ELC-TRE-02-UL',type:'UL',zone:'Zone-N',x:45.8,y:48.7},
-      {id:'LAM-BOP-01-L',name:'压合棕化线投板机#1',type:'L',zone:'Zone-I',x:43.5,y:76.4},
-      {id:'LAM-BOP-01-UL',name:'LAM-BOP-01-UL',type:'UL',zone:'Zone-N',x:43.4,y:56.9},
-      {id:'LAM-BOP-02-L',name:'压合棕化线投板机#2',type:'L',zone:'Zone-J',x:45.8,y:77.3},
-      {id:'LAM-BOP-02-UL',name:'压合棕化线收板机#2',type:'UL',zone:'Zone-N',x:45.7,y:56.8},
-      {id:'LIN-INNDES-01-L',name:'内层DES for湿膜投板机#1',type:'L',zone:'Zone-N',x:90.3,y:36.4},
-      {id:'LIN-INNDES-01-UL',name:'内层AOI（在线）收板机#1',type:'UL',zone:'Zone-N',x:90.4,y:70.9},
-      {id:'LIN-INNDES-02-L',name:'内层DES for湿膜投板机#2',type:'L',zone:'Zone-N',x:88.1,y:36.7},
-      {id:'LIN-INNDES-02-UL',name:'内层AOI（在线）收板机#2',type:'UL',zone:'Zone-C',x:87.6,y:72.4},
-      {id:'LIN-INNLDI-01-L',name:'投收一体机#1',type:'L',zone:'Zone-N',x:81,y:29.4},
-      {id:'LIN-INNLDI-02-L',name:'内层LDI#2',type:'L',zone:'Zone-N',x:84.8,y:29.6},
-      {id:'LIN-INNLDI-03-L',name:'内层LDI#3',type:'L',zone:'Zone-N',x:88.8,y:29.6},
-      {id:'LIN-OUTDES-01-L',name:'外层DES#1',type:'L',zone:'Zone-N',x:92.6,y:35.7},
-      {id:'LIN-OUTDES-01-UL',name:'外层DES收板机-01',type:'UL',zone:'Zone-H',x:92.6,y:72.4},
-      {id:'LIN-OUTDEV-01-L',name:'外层显影线投板机#1',type:'L',zone:'Zone-N',x:75.4,y:33.2},
-      {id:'LIN-OUTDEV-01-UL',name:'LIN-OUTDEV-01-UL',type:'UL',zone:'Zone-D',x:74.9,y:20.4},
-      {id:'LIN-OUTTRE-01-L',name:'外层前处理投板机#1',type:'L',zone:'Zone-N',x:77.7,y:67.2},
-      {id:'LIN-OUTTRE-01-UL',name:'外层压膜机收板机#1',type:'UL',zone:'Zone-N',x:78.3,y:40.3},
-      {id:'LIN-OUTTRE-02-UL',name:'LIN-OUTTRE-02-UL',type:'UL',zone:'Zone-N',x:75.7,y:40.4},
-      {id:'LIN-INNTRE-01-UL',name:'内层涂布收板机#1',type:'UL',zone:'Zone-L',x:84.7,y:44.6},
-      {id:'SMK-BRU-01-L',name:'塞孔十六轴研磨#1',type:'L',zone:'Zone-N',x:70.3,y:67.5},
-      {id:'SMK-BRU-01-UL',name:'塞孔十六轴研磨收板机#1',type:'UL',zone:'Zone-F',x:70.3,y:49.4},
-      {id:'SMK-BRU-02-UL',name:'塞孔十六轴研磨收板机#2',type:'UL',zone:'Zone-D',x:63.6,y:25.3},
-      {id:'SMK-BRU-02-L',name:'塞孔十六轴研磨投板机#2',type:'L',zone:'Zone-K',x:63.7,y:45.8},
-      {id:'CPP-VCP-03-L',name:'镀铜-VCP#3',type:'L',zone:'Zone-N',x:61.1,y:14.6},
-      {id:'CPP-VCP-03-UL',name:'CPP-VCP-03-UL',type:'UL',zone:'Zone-N',x:61,y:62.8},
-      {id:'LIN-INNTRE-01-L',name:'LIN-INNTRE-01-L',type:'L',zone:'Zone-N',x:84.6,y:68.4},
-      {id:'LIN-INNTRE-02-L',name:'LIN-INNTRE-02-L',type:'L',zone:'Zone-N',x:82.2,y:64.5},
-      {id:'LIN-INNTRE-02-UL-1',name:'内层前处理#2压膜机#1收板机',type:'UL',zone:'Zone-N',x:80.2,y:40.2},
-      {id:'LIN-INNTRE-02-UL-2',name:'内层前处理#2压膜机#2收板机',type:'UL',zone:'Zone-N',x:82.2,y:40.2},
-      {id:'LSR-Plasma-01-L',name:'雷射-Plasma#1-投收一体机',type:'L',zone:'Zone-N',x:44.4,y:21.4},
-      {id:'LAM-Cutgrind-01-UL',name:'LAM-Cutgrind-01-UL',type:'UL',zone:'Zone-N',x:12.6,y:54.9},
-
-      // {id:'load1',name:'load1',type:'L',zone:'Zone-N',x:12.5,y:54.7},
-      {id:'load3',name:'load3',type:'L',zone:'Zone-N',x:92.6,y:29.6},
-      {id:'load4',name:'load4',type:'L',zone:'Zone-N',x:86.8,y:22.4},
-      {id:'load5',name:'load5',type:'L',zone:'Zone-N',x:91.8,y:22.3},
-      {id:'load6',name:'load6',type:'L',zone:'Zone-N',x:48.6,y:14.7},
-      {id:'load7',name:'load7',type:'L',zone:'Zone-N',x:48.6,y:66.5},
-      ],
-    2: [
-      {id:'ROU-RIN-01-UL',name:'电测板弯翘检测机收板机#1',type:'UL',zone:'Zone-N',x:56.2,y:71.1},
-      // {id:'LAM-DRL-01-UL',name:'压合X-Ray鑚靶机#1',type:'UL',zone:'Zone-N',x:98.5,y:21.2},
-      {id:'SMK-LEGTUN-01-L',name:'文字隧道烤箱#1',type:'L',zone:'Zone-N',x:74,y:59.9},
-      {id:'SMK-LEGTUN-01-UL',name:'文字隧道烤箱收板机#1',type:'UL',zone:'Zone-N',x:73.9,y:76.8},
-      {id:'CPP-VCP-01-UL',name:'镀铜-VCP#1',type:'UL',zone:'Zone-N',x:9.2,y:20.8},
-      {id:'CPP-VCP-02-L',name:'CPP-VCP-02-L',type:'L',zone:'Zone-N',x:12.1,y:61.9},
-      {id:'CPP-VCP-02-UL',name:'CPP-VCP-02-UL',type:'UL',zone:'Zone-N',x:12.3,y:20.5},
-      {id:'WIR-Vdevelop-01-L',name:'线路-垂直显影#1-投板机',type:'L',zone:'Zone-H',x:22.7,y:72.2},
-      {id:'CPP-Horizontalplating-01-L',name:'镀铜-水平电镀#1-投板机',type:'L',zone:'Zone-N',x:6.8,y:20.6},
-      {id:'CPP-Horizontalplating-01-UL',name:'镀铜-水平电镀#1-收板机',type:'UL',zone:'Zone-N',x:6.9,y:69.1},
-      {id:'WIR-SE-01-L',name:'线路-SE#1-投板机',type:'L',zone:'Zone-N',x:23.1,y:17},
-      {id:'WIR-SE-01-UL',name:'线路-SE#1-收板机',type:'UL',zone:'Zone-N',x:23.3,y:43.5},
-      {id:'CPP-Patternplating-01-L',name:'镀铜-图形电镀#1-投板机',type:'L',zone:'Zone-N',x:16.8,y:21.5},
-      {id:'CPP-Patternplating-01-UL',name:'镀铜-图形电镀#1-收板机',type:'UL',zone:'Zone-N',x:16.9,y:48.2},
-      {id:'WIR-LDI-01-UL',name:'线路-LDI#1-收板机',type:'UL',zone:'Zone-N',x:15.6,y:68.4},
-      {id:'WIR-LDI-01-L',name:'线路-LDI#1-投板机',type:'L',zone:'Zone-N',x:15.7,y:76.2},
-      {id:'GLD-IR-01-UL',name:'化金-IR炉#1-收板机',type:'UL',zone:'Zone-N',x:65.8,y:43.1},
-      {id:'LSR-Debrowning-01-UL',name:'雷射-去棕化#1-收板机',type:'UL',zone:'Zone-N',x:29.2,y:30.8},
-      {id:'LSR-Debrowning-01-L',name:'雷射-去棕化#1-投板机',type:'L',zone:'Zone-N',x:29.2,y:47.8},
-      {id:'LAM-BOP-03-L',name:'压合棕化线投板机#3',type:'L',zone:'Zone-N',x:39.6,y:79.5},
-      {id:'LAM-BOP-03-UL',name:'压合棕化线收板机#3',type:'UL',zone:'Zone-G',x:39.2,y:59.2},
-      {id:'SDM-Develop-01-UL',name:'防焊-显影#1-收板机',type:'UL',zone:'Zone-N',x:84.7,y:76.1},
-      {id:'SDM-Develop-01-L',name:'SDM-Develop-01-L',type:'L',zone:'Zone-N',x:84.7,y:61.4},
-      {id:'FVI-OSP-01-UL',name:'成检OSP收板机#1',type:'UL',zone:'Zone-N',x:54.1,y:32.9},
-      {id:'SDM-DI-01-UL',name:'防焊-DI曝光机#1-收板机',type:'UL',zone:'Zone-N',x:77.6,y:54.9},
-      {id:'GLD-Pretreatment-01-UL',name:'GLD-Pretreatment-01-UL',type:'UL',zone:'Zone-N',x:59.3,y:67.8},
-      {id:'SMK-DIX-01-L',name:'防焊DI投收一体机#1',type:'L',zone:'Zone-N',x:77.7,y:47.7},
-      {id:'SMK-SPR-01-L',name:'防焊文字喷印机投收一体机#1',type:'L',zone:'Zone-M',x:79.1,y:63.2},
-      // {id:'SUR-PAS-01-L',name:'SUR-PAS-01-L',type:'L',zone:'Zone-N',x:100,y:55.7},
-      // {id:'SUR-PAS-01-UL',name:'SUR-PAS-01-UL',type:'L',zone:'Zone-N',x:100,y:60.3},
-      {id:'SDM-DI-01-L',name:'防焊-DI曝光机#1-投板机',type:'L',zone:'Zone-N',x:82.4,y:48.2},
-      {id:'WIR-TrayCleaning-01-L',name:'线路Tray盘清洗线-01-投板机',type:'L',zone:'Zone-N',x:9.9,y:74},
-      {id:'WIR-Vdevelop-01-UL',name:'线路-垂直显影#1-收板机',type:'UL',zone:'Zone-N',x:22.5,y:55},
-      {id:'WIR-DES-01-L',name:'线路-DES#1',type:'L',zone:'Zone-N',x:26.2,y:78.7},
-      {id:'WIR-DES-01-UL',name:'线路-DES#1-收板机',type:'UL',zone:'Zone-N',x:26.4,y:52},
-      {id:'WIR-Decoatbake-01-UL',name:'线路-去膜烘烤#1-收板机',type:'UL',zone:'Zone-M',x:19.6,y:19.6},
-      {id:'SMK-TRE-01-L',name:'防焊前处理线投板机#1',type:'L',zone:'Zone-K',x:91.1,y:79.7},
-      {id:'SMK-TRE-01-UL',name:'防焊前处理线收板机#1',type:'UL',zone:'Zone-N',x:91.1,y:64.6},
-      {id:'GLD-RinseENEPIG-01-UL',name:'鎳鈀金清洗收板机',type:'UL',zone:'Zone-N',x:59.4,y:62.2},
-      {id:'WIR-Decoatbake-01-L',name:'线路-去膜烘烤#1-投板机',type:'L',zone:'Zone-N',x:19.5,y:44},
-      {id:'SMK-AUTPRI-01-L',name:'SMK-AUTPRI-01-L',type:'L',zone:'Zone-N',x:90.9,y:46.8},
-      {id:'CPP-VCP-01-L',name:'镀铜-VCP#1-投板机',type:'L',zone:'Zone-N',x:9.1,y:62.1},
-      {id:'GLD-IR-01-L',name:'化金-IR炉#1-投板机',type:'L',zone:'Zone-N',x:65.7,y:51.4},
-      {id:'SMK-DEV-01-UL',name:'防焊显影收板机#1',type:'UL',zone:'Zone-N',x:81.8,y:76.3},
-      {id:'SMK-DEV-01-L',name:'防焊显影投板机#1',type:'L',zone:'Zone-N',x:81.9,y:61.6},
-      {id:'SUR-FLM-01-UL',name:'表面处理去膜线收板机#1',type:'UL',zone:'Zone-N',x:68.4,y:56.6},
-      {id:'WIR-Pretreatment-01-L',name:'线路-前处理压膜#1-投板机',type:'L',zone:'Zone-K',x:19.8,y:53.9},
-      {id:'WIR-Pretreatment-01-UL',name:'线路-前处理压膜#1-收板机',type:'UL',zone:'Zone-L',x:19.7,y:75.8},
-      {id:'GLD-Pretreatment-01-L',name:'化金-前处理#1',type:'L',zone:'Zone-N',x:59.7,y:78.6},
-      {id:'SMK-TUN-01-L',name:'防焊后烤投板机#1',type:'L',zone:'Zone-D',x:76.5,y:61.1},
-      {id:'SMK-TUN-01-UL',name:'防焊后烤收板机#1',type:'UL',zone:'Zone-H',x:76.3,y:80.1},
-      {id:'FVI-CLE-01-L',name:'FVI-CLE-01-L',type:'L',zone:'Zone-N',x:51.9,y:44.5},
-      {id:'FVI-CLE-01-UL',name:'FVI-CLE-01-UL',type:'UL',zone:'Zone-N',x:51.8,y:31.1},
-      {id:'FVI-CLE-02-UL',name:'FVI-CLE-02-UL',type:'UL',zone:'Zone-N',x:51.7,y:26},
-      {id:'FVI-OSP-01-L',name:'FVI-OSP-01-L',type:'L',zone:'Zone-N',x:54.3,y:50.6},
-      {id:'LAM-BOP-04-L',name:'LAM-BOP-04-L',type:'L',zone:'Zone-N',x:36.5,y:79.2},
-      {id:'LAM-DLD-01-L',name:'LAM-DLD-01-L',type:'L',zone:'Zone-N',x:37.1,y:58.9},
-      {id:'SMK-AUTPRI-01-UL',name:'SMK-AUTPRI-01-UL',type:'UL',zone:'Zone-N',x:89.3,y:50.6},
-      // {id:'SMK-PAS-01-L',name:'SMK-PAS-01-L',type:'L',zone:'Zone-N',x:100,y:67.4},
-      // {id:'SMK-PAS-01-UL',name:'SMK-PAS-01-UL',type:'UL',zone:'Zone-N',x:100,y:63.6},
-      {id:'WIR-DES-02-L',name:'WIR-DES-02-L',type:'L',zone:'Zone-N',x:31.1,y:78.9},
-      {id:'WIR-DES-02-UL',name:'WIR-DES-02-UL',type:'UL',zone:'Zone-N',x:31.3,y:52.7},
-      {id:'LAM-RED-01-L',name:'LAM-RED-01-L',type:'L',zone:'Zone-N',x:32.7,y:32.5},
-      {id:'LAM-RED-01-UL',name:'LAM-RED-01-UL',type:'UL',zone:'Zone-N',x:32.6,y:13.7},
-
-      {id:'EAP1',name:'EAP1',type:'L',zone:'Zone-N',x:70.9,y:62.7},
-      {id:'EAP2',name:'EAP2',type:'UL',zone:'Zone-N',x:70.8,y:76.5},
-    ]
-  },
-   'PA06': {
-    1: [
-      {id:'LOAD1',name:'LOAD1',type:'L',zone:'Zone-N',x:31.4,y:38.3},
-      {id:'LOAD2',name:'LOAD2',type:'UL',zone:'Zone-N',x:26.2,y:38.4},
-      {id:'LOAD3',name:'LOAD3',type:'L',zone:'Zone-N',x:20.1,y:39.4},
-      {id:'LOAD4',name:'LOAD4',type:'UL',zone:'Zone-N',x:15.2,y:39.3},
-      {id:'LOAD5',name:'LOAD5',type:'L',zone:'Zone-N',x:9.8,y:39.1},
-    ],
-    2: [
-      {id:'LOAD6',name:'LOAD6',type:'L',zone:'Zone-N',x:32.3,y:43.4},
-      {id:'LOAD7',name:'LOAD7',type:'UL',zone:'Zone-N',x:26.4,y:43.7},
-      {id:'LOAD8',name:'LOAD8',type:'L',zone:'Zone-N',x:19.3,y:43.3},
-      {id:'LOAD9',name:'LOAD9',type:'UL',zone:'Zone-N',x:13.3,y:43.4},
-      {id:'LOAD10',name:'LOAD10',type:'L',zone:'Zone-N',x:9.1,y:44.3},
-    ]
-  }
-};
+/* ★ ข้อมูลเครื่องจักรและโซนย้ายออกไปเก็บที่ backend/config/machines.json + zones.json แล้ว
+   - โหลดตอน boot ผ่าน GET /api/layout
+   - บันทึกกลับผ่าน POST /api/layout/machines | /api/layout/zones จากโหมด Admin
+   → แก้ผังบนหน้าเว็บได้จบในตัว ไม่ต้อง copy-paste โค้ดกลับมาแปะใน index.html อีก */
+var MACHINES_DB = {};
 
 /* ═══════ EAP STATUS MAP ═══════ */
 function pickField(d, key){
@@ -1841,7 +1886,7 @@ function renderQrTabs(data) {
 
     lots.forEach(function(lot, lotIdx) {
       var pct = (lot.ok_count + lot.err_count) > 0 ? Math.round(lot.ok_count * 1000 / (lot.ok_count + lot.err_count)) / 10 : 0;
-      var pctClass = pct >= 95 ? 'pct-good' : pct >= 50 ? 'pct-mid' : 'pct-bad';
+      var pctClass = qrPctClass(pct);
       var lotStartStr = formatLotTime(lot.lot_start_time);
       var lotEndStr = formatLotTime(lot.lot_end_time, true);
       var lotEndActive = isLotActive(lot.lot_end_time);
@@ -2100,7 +2145,7 @@ function renderQrDailyTable(data) {
   }
   var html = '';
   data.days.forEach(function(d) {
-    var pctClass = d.pct_qr >= 95 ? 'pct-good' : d.pct_qr >= 50 ? 'pct-mid' : 'pct-bad';
+    var pctClass = qrPctClass(d.pct_qr);
     html += '<tr>' +
       '<td>' + escH(d.date) + '</td>' +
       '<td>' + d.total + '</td>' +
@@ -2126,6 +2171,7 @@ function recordQrCode(id, panelId, panelTime){
   if(!panelId) return;
   if(!qrHistory[id]) qrHistory[id] = [];
   if(qrHistory[id].length>0 && qrHistory[id][0].panelId === panelId) return;
+  var isFirstRecord = qrHistory[id].length === 0;
   /* ★ is_error = true ถ้า panel_id ขึ้นต้นด้วย Error, เป็น null/empty, หรือมีคำว่า NULL อยู่ในค่า (เช่น "[NULL]") */
   var isError = !panelId || String(panelId).indexOf('Error') === 0 || String(panelId).trim() === '' || /NULL/i.test(String(panelId));
   qrHistory[id].unshift({
@@ -2134,6 +2180,9 @@ function recordQrCode(id, panelId, panelTime){
     ts: panelTime ? new Date(panelTime) : new Date()
   });
   if(qrHistory[id].length > MAX_HISTORY) qrHistory[id].pop();
+  /* ★ [ลูกเล่น A] แผ่นใหม่เข้ามา → คลื่นกระเพื่อมบนแผนที่
+     ข้ามแผ่นแรกของแต่ละเครื่อง ไม่งั้นตอน SNAPSHOT แรกจะกระพริบพร้อมกันทั้งโรงงาน */
+  if(!isFirstRecord) pingMarker(id, isError);
   // ★ ถ้า popup เปิดอยู่กับเครื่องนี้ → refresh แบบ silent (ไม่ show loading)
   if (qrPopupState.machineId === id) {
     // delay 1s เพื่อรอให้ DB commit เสร็จ
@@ -2573,14 +2622,17 @@ function renderPopup(id, fromLive){
   /* ★ Default date input = today (ถ้ายังไม่ได้เลือก) */
   var miDateEl = document.getElementById('miDateInput');
   var todayStr = localDateStr();
-  /* ถ้าเปิดเครื่องใหม่ → reset date เป็น today (live mode) */
+  /* ★ [FIX] เปลี่ยนเครื่อง → "คงวันที่ที่เลือกไว้" (sticky date)
+     ของเดิม reset เป็นวันนี้ทุกครั้ง ทำให้ต้องเลือกวันใหม่ทุกเครื่องตอนไล่ดูย้อนหลัง
+     กลับเป็นข้อมูลสดได้ด้วยปุ่ม "วันนี้" ในแถบวันที่ */
   if (!popupHistState.machineId || popupHistState.machineId !== id) {
+    var keepDate = popupHistState.date || (miDateEl && miDateEl.value) || todayStr;
     popupHistState.machineId = id;
-    popupHistState.date = todayStr;
+    popupHistState.date = keepDate;
     popupHistState.state = null;
     popupHistState.loading = false;
-    if (miDateEl) miDateEl.value = todayStr;
-    updateMiDateBarState(todayStr);
+    if (miDateEl) miDateEl.value = keepDate;
+    updateMiDateBarState(keepDate);
   } else {
     /* ถ้าเปิดเครื่องเดิม → ใช้ date เดิม */
     if (miDateEl && !miDateEl.value) miDateEl.value = popupHistState.date || todayStr;
@@ -2767,6 +2819,107 @@ function loadMachineHistory(machineId, dateStr) {
     });
 }
 
+/* ═══════ [ลูกเล่น A] คลื่นกระเพื่อมบน marker ═══════ */
+function pingMarker(id, isError){
+  var mk = document.querySelector('.mk[data-id="' + id + '"]');
+  if (!mk) return;
+  /* กันคลื่นซ้อนกันรัวเกินไปตอนเครื่องเดินเร็ว */
+  if (mk.querySelectorAll('.mk-ping').length >= 2) return;
+  var el = document.createElement('span');
+  el.className = 'mk-ping' + (isError ? ' err' : '');
+  mk.appendChild(el);
+  setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 950);
+}
+
+/* ═══════ [ลูกเล่น B] เลขวิ่งจากค่าเดิม → ค่าใหม่ ═══════ */
+function fmtFixed(v, decimals){
+  return decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString('en-US');
+}
+
+function animateNum(el, from, to, decimals, suffixHtml){
+  if (!el) return;
+  var dur = 650;
+  var diff = to - from;
+  /* ค่าไม่เปลี่ยน หรือผู้ใช้ปิดแอนิเมชัน → เขียนค่าตรง ๆ */
+  if (Math.abs(diff) < Math.pow(10, -decimals) ||
+      (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches)) {
+    el.innerHTML = fmtFixed(to, decimals) + (suffixHtml || '');
+    return;
+  }
+  /* ★ requestAnimationFrame ถูกหยุดเมื่อแท็บอยู่เบื้องหลัง
+     ถ้าไม่กัน เลขจะค้างที่ค่าเริ่มต้นตลอด (เจอตอนทดสอบจริง) */
+  if (document.hidden) {
+    el.innerHTML = fmtFixed(to, decimals) + (suffixHtml || '');
+    return;
+  }
+  var t0 = performance.now();
+  var done = false;
+  (function step(now){
+    if (done) return;
+    var k = Math.min(1, (now - t0) / dur);
+    var eased = 1 - Math.pow(1 - k, 3);           /* easeOutCubic */
+    el.innerHTML = fmtFixed(from + diff * eased, decimals) + (suffixHtml || '');
+    if (k < 1) requestAnimationFrame(step); else done = true;
+  })(t0);
+  /* กันเหนียว: ไม่ว่าเฟรมจะถูกหยุดกลางทางด้วยเหตุใด ค่าสุดท้ายต้องตรงเสมอ */
+  setTimeout(function(){
+    if (done) return;
+    done = true;
+    el.innerHTML = fmtFixed(to, decimals) + (suffixHtml || '');
+  }, dur + 150);
+}
+
+/* จำค่าที่แสดงอยู่ของเครื่องล่าสุด — ใช้เป็นจุดเริ่มของเลขวิ่ง
+   เปลี่ยนเครื่อง/เปลี่ยนวัน → เริ่มจาก 0 (ได้เอฟเฟกต์กวาดตอนเปิด) */
+var miLastShown = { key:null, total:0, pct:0 };
+
+/* ═══════ เกณฑ์สี %QR — จุดเดียวทั้งแอป ═══════
+   ★ [FIX] ของเดิม hardcode เกณฑ์ไว้ 6 จุด ด้วยตัวเลขคนละชุด (100/50, 95/50, 95/80)
+   ทำให้ค่าเดียวกันขึ้นคนละสีคนละหน้าจอ
+   ตอนนี้ยึด QR_TARGET_PCT จาก backend (.env, ค่าเริ่มต้น 99) เป็นเกณฑ์เดียว:
+     เขียว = ถึงเป้า | เหลือง = ต่ำกว่าเป้าไม่เกิน QR_WARN_MARGIN | แดง = ต่ำกว่านั้น
+   อยากให้แถบเหลืองกว้าง/แคบลง แก้ QR_WARN_MARGIN ที่เดียว */
+var QR_TARGET_PCT = 99;   /* โหลดทับด้วยค่าจริงจาก /api/layout ตอน boot */
+var QR_WARN_MARGIN = 5;
+
+function qrPctClass(v){
+  var p = parseFloat(v) || 0;
+  if (p >= QR_TARGET_PCT) return 'pct-good';
+  if (p >= QR_TARGET_PCT - QR_WARN_MARGIN) return 'pct-mid';
+  return 'pct-bad';
+}
+function qrPctColor(v){
+  var c = qrPctClass(v);
+  return c === 'pct-good' ? 'var(--run)' : c === 'pct-mid' ? 'var(--idle)' : 'var(--down)';
+}
+
+/* ★ วงแหวน %QR (SVG donut) — แทนแท่ง progress สูง 5px ของเดิม อ่านค่าได้ในแวบเดียว */
+function qrRingSvg(pct, color, sweep){
+  var r = 24;
+  var circ = 2 * Math.PI * r;              /* ~150.80 */
+  var v = Math.max(0, Math.min(100, pct));
+  var offset = circ * (1 - v / 100);
+  /* ★ [ลูกเล่น C] --ring-circ/--ring-offset ป้อนให้ @keyframes ringSweep กวาดจาก 0 ถึงค่าจริง */
+  return '<div class="mi-ring">' +
+    '<svg width="60" height="60" viewBox="0 0 60 60" aria-hidden="true">' +
+      '<circle class="mi-ring-track" cx="30" cy="30" r="' + r + '" fill="none" stroke-width="6"/>' +
+      '<circle class="mi-ring-fill' + (sweep ? ' sweep' : '') + '" cx="30" cy="30" r="' + r + '"' +
+        ' fill="none" stroke-width="6" stroke="' + color + '"' +
+        ' stroke-dasharray="' + circ.toFixed(2) + '"' +
+        ' stroke-dashoffset="' + offset.toFixed(2) + '"' +
+        ' style="--ring-circ:' + circ.toFixed(2) + ';--ring-offset:' + offset.toFixed(2) + '"/>' +
+    '</svg>' +
+    '<div class="mi-ring-text" id="miRingText" style="color:' + color + '">' + v.toFixed(1) +
+      '<span class="mi-ring-unit">%</span></div>' +
+  '</div>';
+}
+
+/* ★ ใส่คั่นหลักพันให้ตัวเลข (ค่าที่ไม่ใช่ตัวเลข เช่น '—' คืนกลับตามเดิม) */
+function fmtCount(v){
+  var n = parseInt(v, 10);
+  return (v !== null && v !== '' && !isNaN(n)) ? n.toLocaleString('en-US') : (v || '—');
+}
+
 /* ★ Render popup-fields from a state object (live OR historical) */
 function renderPopupFields(s){
   var dateStr;
@@ -2777,38 +2930,93 @@ function renderPopupFields(s){
     dateStr = '—';
   }
   var lotId=formatLotId(s.lot_id);
-  var okQty=s.ok_qty!=null?s.ok_qty:'—';
-  var jobId=s.job_name||s.id_product||'—';
   var modeVal=s.machine_mode||'—';
-  var totalVal=(s.total_sheet!=null && s.total_sheet!=='—')?s.total_sheet:'—';
-  var pctNum=parseFloat(s.pct_qr)||0;
-  var pctColor=pctNum>=100?'var(--run)':pctNum>=50?'var(--idle)':'var(--down)';
-  var errCnt=s.error_sheet||0;
-  var okCnt=s.total_sheet||0;
-  var qrDetail=' ('+okCnt+' OK / '+errCnt+' Err)';
-  var qrVal='<span style="font-weight:700;color:'+pctColor+'">'+pctNum.toFixed(1)+'%</span><span style="color:var(--muted);font-size:11px">'+qrDetail+'</span>';
-  var qrBarW=Math.min(pctNum,100);
-  var alarmVal=s.alarm_text||'—';
-  var alarmCatVal=s.alarm_category||'—';
+  /* ★ [FIX] โหมดดูย้อนหลัง (มี day_*) → แสดงยอดรวม "ทั้งวัน" ทุก LOT
+     ไม่ใช่ยอดของ LOT เดียว (ของเดิมโชว์แค่ LOT สุดท้ายของวันนั้น)
+     โหมด live ไม่มี day_* → ใช้ยอดต่อ LOT เหมือนเดิม */
+  var isDayTotal=(s.day_total_sheet!=null);
+  var okCnt=isDayTotal?(s.day_total_sheet||0):(s.total_sheet||0);
+  var errCnt=isDayTotal?(s.day_error_sheet||0):(s.error_sheet||0);
+  var pctNum=isDayTotal?(parseFloat(s.day_pct_qr)||0):(parseFloat(s.pct_qr)||0);
+  var totalVal=isDayTotal?okCnt:((s.total_sheet!=null && s.total_sheet!=='—')?s.total_sheet:'—');
+  var pctColor=qrPctColor(pctNum);
   var statusCls=s.status||'idle';
-  /* ★ ถ้าเป็น historical state และไม่มี alarm_text → อย่าแสดง "—", แสดง "ไม่มี" แทน */
-  document.getElementById('popup-fields').innerHTML=
-    '<div class="popup-field"><div class="popup-field-label">'+t('mode')+'</div><div class="popup-field-value">'+escH(modeVal)+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('status')+'</div><div class="popup-field-value status-'+statusCls+'">'+(s.status||'IDLE').toUpperCase()+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('alarm')+'</div><div class="popup-field-value" style="color:'+(s.alarm_text?'var(--down)':'var(--muted)')+'">'+escH(alarmVal)+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('alarmCategory')+'</div><div class="popup-field-value" style="color:'+(s.alarm_category?'#d29922':'var(--muted)')+';font-weight:700">'+escH(alarmCatVal)+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('productId')+'</div><div class="popup-field-value" style="color:'+(s.product_id?'var(--accent)':'var(--muted)')+';font-family:\'Cascadia Code\',\'Consolas\',\'Courier New\',monospace;letter-spacing:.5px">'+escH(s.product_id||'—')+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('lotQty')+'</div><div class="popup-field-value" style="font-family:\'Cascadia Code\',\'Consolas\',\'Courier New\',monospace;letter-spacing:.5px">'+escH(lotId)+(s.is_fallback_lot?' <span style="color:var(--idle);font-size:10px;font-weight:600">('+t('startLabel')+')</span>':'')+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">' + t('lotStartLabel') + '</div><div class="popup-field-value" style="font-size:11px">'+formatLotTime(s.lot_start_time)+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">' + t('lotEndLabel') + '</div><div class="popup-field-value" style="font-size:11px">'+formatLotTime(s.lot_end_time, !popupHistState.state)+'</div></div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('totalSheet')+'</div><div class="popup-field-value">'+totalVal+'</div></div>'+
-    '<div class="popup-field" style="min-width:160px"><div class="popup-field-label">'+t('pctQr')+'</div>'+
-      '<div class="popup-field-value">'+qrVal+'</div>'+
-      '<div style="height:5px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden">'+
-        '<div style="height:100%;width:'+qrBarW+'%;background:'+pctColor+';border-radius:3px;transition:width .4s ease"></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="popup-field"><div class="popup-field-label">'+t('date')+'</div><div class="popup-field-value">'+dateStr+'</div></div>';
+  var statusTxt=(s.status||'IDLE').toUpperCase();
+
+  /* ★ [ลูกเล่น B+C] เครื่องใหม่/วันใหม่ = เริ่มนับจาก 0 (กวาดสวย ๆ ตอนเปิด)
+     เครื่องเดิมอัพเดตสด = วิ่งจากค่าที่แสดงอยู่ ไม่กระโดด และไม่รีเซ็ตทุก 3 วิ */
+  var miKey=(s.machine_id||popupHistState.machineId||selId||'?')+'|'+(isDayTotal?'day':'live');
+  var isFresh=(miLastShown.key!==miKey);
+  var fromTotal=isFresh?0:miLastShown.total;
+  var fromPct=isFresh?0:miLastShown.pct;
+  var totalNum=parseInt(totalVal,10); if(isNaN(totalNum)) totalNum=0;
+  var changed=!isFresh && (fromTotal!==totalNum || Math.abs(fromPct-pctNum)>=0.05);
+  miLastShown={key:miKey,total:totalNum,pct:pctNum};
+
+  /* ── การ์ด KPI 3 ใบ: สถานะ / %QR / จำนวนชิ้นงาน ── */
+  var hero =
+    '<div class="mi-hero">' +
+      '<div class="mi-kpi is-'+statusCls+'">' +
+        '<div class="mi-kpi-label">'+t('status')+'</div>' +
+        '<div class="mi-kpi-value mi-kpi-status status-'+statusCls+'">' +
+          '<span class="mi-kpi-dot"></span>'+escH(statusTxt) +
+        '</div>' +
+        '<div class="mi-kpi-sub">'+escH(modeVal)+'</div>' +
+      '</div>' +
+      '<div class="mi-kpi">' +
+        '<div class="mi-kpi-label">'+t('pctQr')+'</div>' +
+        qrRingSvg(pctNum, pctColor, isFresh) +
+        '<div class="mi-kpi-sub">'+fmtCount(okCnt)+' OK / '+fmtCount(errCnt)+' Err</div>' +
+      '</div>' +
+      '<div class="mi-kpi">' +
+        '<div class="mi-kpi-label">'+t('totalSheet')+'</div>' +
+        '<div class="mi-kpi-value" id="miTotalValue">'+fmtCount(totalVal)+'</div>' +
+        '<div class="mi-kpi-sub"></div>' +
+      '</div>' +
+    '</div>' +
+    /* ป้ายเตือนว่ายอดในการ์ดเป็นยอดรวมทั้งวัน (เฉพาะโหมดดูย้อนหลัง) */
+    (isDayTotal
+      ? '<div class="mi-daynote">'+escH(t('wholeDay'))+(s.day_lot_count?' · '+s.day_lot_count+' LOT':'')+'</div>'
+      : '');
+
+  /* ── ฟิลด์ที่เหลือ: grid 2 คอลัมน์ (ฟิลด์ยาวกิน 2 ช่อง) ── */
+  var fields =
+    '<div class="popup-field span2"><div class="popup-field-label">'+t('alarm')+'</div>' +
+      '<div class="popup-field-value '+(s.alarm_text?'is-alarm':'is-muted')+'">'+escH(s.alarm_text||'—')+'</div></div>' +
+    '<div class="popup-field"><div class="popup-field-label">'+t('alarmCategory')+'</div>' +
+      '<div class="popup-field-value '+(s.alarm_category?'is-cat':'is-muted')+'">'+escH(s.alarm_category||'—')+'</div></div>' +
+    '<div class="popup-field"><div class="popup-field-label">'+t('productId')+'</div>' +
+      '<div class="popup-field-value mono '+(s.product_id?'is-pid':'is-muted')+'">'+escH(s.product_id||'—')+'</div></div>' +
+    '<div class="popup-field span2"><div class="popup-field-label">'+t('lotQty')+'</div>' +
+      '<div class="popup-field-value mono">'+escH(lotId) +
+      (s.is_fallback_lot?' <span class="mi-kpi-sub" style="color:var(--idle)">('+escH(t('startLabel'))+')</span>':'') +
+      '</div></div>' +
+    '<div class="popup-field"><div class="popup-field-label">'+t('lotStartLabel')+'</div>' +
+      '<div class="popup-field-value is-time">'+formatLotTime(s.lot_start_time)+'</div></div>' +
+    '<div class="popup-field"><div class="popup-field-label">'+t('lotEndLabel')+'</div>' +
+      '<div class="popup-field-value is-time">'+formatLotTime(s.lot_end_time, !popupHistState.state)+'</div></div>' +
+    '<div class="popup-field span2"><div class="popup-field-label">'+t('date')+'</div>' +
+      '<div class="popup-field-value is-time">'+escH(dateStr)+'</div></div>';
+
+  document.getElementById('popup-fields').innerHTML = hero + fields;
+
+  /* ── ยิงเลขวิ่งหลัง DOM พร้อม ── */
+  var host=document.getElementById('popup-fields');
+  var totalEl=host.querySelector('#miTotalValue');
+  var ringTxt=host.querySelector('#miRingText');
+  if(totalEl && totalVal!=='\u2014'){
+    animateNum(totalEl, fromTotal, totalNum, 0, '');
+  }
+  if(ringTxt){
+    animateNum(ringTxt, fromPct, pctNum, 1, '<span class="mi-ring-unit">%</span>');
+  }
+  /* ค่าเปลี่ยนระหว่างที่เปิดค้างไว้ → เรืองแสงเตือนสายตา */
+  if(changed){
+    if(totalEl) totalEl.classList.add('bump');
+    if(ringTxt) ringTxt.classList.add('bump');
+    var qrCard=ringTxt?ringTxt.closest('.mi-kpi'):null;
+    if(qrCard) qrCard.classList.add('flash');
+  }
 }
 
 
@@ -3026,7 +3234,7 @@ function renderStatusHistoryList(data, loadMore) {
       if (ev.lot_id && ev.lot_id !== '(no lot)') metaParts.push('<span style="color:var(--accent)">LOT:' + escH(ev.lot_id) + '</span>');
       if (ev.total_sheet != null) metaParts.push('Sheets:' + ev.total_sheet + (ev.error_sheet ? ' (' + ev.error_sheet + ' err)' : ''));
       if (ev.pct_qr != null) {
-        var pctColor = ev.pct_qr >= 95 ? 'var(--run)' : (ev.pct_qr >= 80 ? 'var(--idle)' : 'var(--down)');
+        var pctColor = qrPctColor(ev.pct_qr);
         metaParts.push('<span style="color:' + pctColor + ';font-weight:700">' + ev.pct_qr + '%</span>');
       }
       if (ev.product_id) metaParts.push('<span style="color:var(--muted)">PN:' + escH(ev.product_id) + '</span>');
@@ -3150,9 +3358,88 @@ mapEl.addEventListener('mousedown',function(e){
 });
 document.addEventListener('mousemove',function(e){if(!dragging)return;panX+=e.clientX-lx;panY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;applyTransform();},{passive:true});
 document.addEventListener('mouseup',function(){dragging=false;mapEl.style.cursor=''});
-var ptx=0,pty=0;
-mapEl.addEventListener('touchstart',function(e){if(e.touches.length===1){ptx=e.touches[0].clientX;pty=e.touches[0].clientY}},{passive:true});
-mapEl.addEventListener('touchmove',function(e){if(e.touches.length===1){panX+=e.touches[0].clientX-ptx;panY+=e.touches[0].clientY-pty;ptx=e.touches[0].clientX;pty=e.touches[0].clientY;applyTransform()}},{passive:true});
+/* ═══════ TOUCH: ลาก 1 นิ้ว + ซูม 2 นิ้ว (pinch) + แตะสองครั้งเพื่อซูม ═══════
+   ★ ของเดิมมีแค่ลากนิ้วเดียว ไม่มี pinch และ handler เป็น {passive:true} เลย preventDefault ไม่ได้
+     → browser ซูมทั้งหน้าแทนที่จะซูมแผนที่ บนแอปที่แกนหลักคือผังโรงงาน 4000px ใช้งานแทบไม่ได้
+   ตอนนี้ใช้ค่า scale/panX/panY + zoomAt() ชุดเดียวกับเมาส์ ไม่ได้แยกโค้ดคนละทาง */
+var _tch = { mode:null, x:0, y:0, dist:0, moved:false, lastTapTime:0, lastTapX:0, lastTapY:0 };
+
+function _tDist(a,b){ var dx=b.clientX-a.clientX, dy=b.clientY-a.clientY; return Math.sqrt(dx*dx+dy*dy) }
+function _tMid(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 } }
+function _tBlocked(e){
+  if(typeof zoneEditMode!=='undefined' && zoneEditMode) return true;
+  if(typeof machineDragMode!=='undefined' && machineDragMode) return true;
+  var t=e.target;
+  return !!(t.closest('.mk')||t.closest('#mini-map')||t.closest('#zoom-btns')||t.closest('#map-legend'));
+}
+
+mapEl.addEventListener('touchstart',function(e){
+  if(e.touches.length===2){
+    /* สองนิ้ว = pinch — รับเสมอ แม้นิ้วแรกจะเริ่มบนมาร์กเกอร์ */
+    if(typeof zoneEditMode!=='undefined' && zoneEditMode) return;
+    if(typeof machineDragMode!=='undefined' && machineDragMode) return;
+    var m=_tMid(e.touches[0],e.touches[1]);
+    _tch.mode='pinch'; _tch.dist=_tDist(e.touches[0],e.touches[1]);
+    _tch.x=m.x; _tch.y=m.y; _tch.moved=true;
+    e.preventDefault();
+    return;
+  }
+  if(e.touches.length===1){
+    if(_tBlocked(e)){ _tch.mode=null; return }
+    _tch.mode='pan'; _tch.x=e.touches[0].clientX; _tch.y=e.touches[0].clientY; _tch.moved=false;
+  }
+},{passive:false});
+
+mapEl.addEventListener('touchmove',function(e){
+  if(!_tch.mode) return;
+  if(_tch.mode==='pan' && e.touches.length===1){
+    var t=e.touches[0];
+    var dx=t.clientX-_tch.x, dy=t.clientY-_tch.y;
+    if(!_tch.moved && Math.abs(dx)+Math.abs(dy) < 4) return;  /* กันนิ้วสั่นตอนตั้งใจจะแตะ */
+    panX+=dx; panY+=dy;
+    _tch.x=t.clientX; _tch.y=t.clientY; _tch.moved=true;
+    applyTransform();
+    e.preventDefault();
+  } else if(_tch.mode==='pinch' && e.touches.length===2){
+    var d=_tDist(e.touches[0],e.touches[1]);
+    var m=_tMid(e.touches[0],e.touches[1]);
+    /* เลื่อนตามจุดกึ่งกลางก่อน แล้วค่อยซูมรอบจุดนั้น — นิ้วจะรู้สึก "ติด" กับจุดที่จับอยู่ */
+    panX+=m.x-_tch.x; panY+=m.y-_tch.y;
+    if(_tch.dist>0 && d>0){
+      var f=d/_tch.dist;
+      f=Math.max(.5,Math.min(2,f));
+      zoomAt(m.x,m.y,f,false);
+    } else {
+      applyTransform();
+    }
+    _tch.dist=d; _tch.x=m.x; _tch.y=m.y;
+    e.preventDefault();
+  }
+},{passive:false});
+
+function _tEnd(e){
+  if(e.touches.length===0){
+    /* แตะสองครั้งเร็ว ๆ ที่เดิม = ซูมเข้า (แตะครั้งที่สองตอนซูมสุดแล้ว = กลับไป 100%) */
+    if(_tch.mode==='pan' && !_tch.moved && e.changedTouches.length===1){
+      var t=e.changedTouches[0];
+      var now=performance.now();
+      var near=Math.abs(t.clientX-_tch.lastTapX)<30 && Math.abs(t.clientY-_tch.lastTapY)<30;
+      if(now-_tch.lastTapTime<300 && near){
+        if(scale>=3) resetZoom(); else zoomAt(t.clientX,t.clientY,1.8,true);
+        _tch.lastTapTime=0;
+      } else {
+        _tch.lastTapTime=now; _tch.lastTapX=t.clientX; _tch.lastTapY=t.clientY;
+      }
+    }
+    _tch.mode=null; _tch.dist=0;
+  } else if(e.touches.length===1){
+    /* ยกนิ้วออกหนึ่งข้างระหว่าง pinch → ลากต่อด้วยนิ้วที่เหลือแบบไม่กระตุก */
+    _tch.mode='pan'; _tch.x=e.touches[0].clientX; _tch.y=e.touches[0].clientY;
+    _tch.dist=0; _tch.moved=true;
+  }
+}
+mapEl.addEventListener('touchend',_tEnd,{passive:true});
+mapEl.addEventListener('touchcancel',function(){_tch.mode=null;_tch.dist=0},{passive:true});
 
 /* ═══════ MINI-MAP ═══════ */
 function showMiniMap(){
@@ -3413,7 +3700,7 @@ function renderSidebarQr(data) {
   }
 
   var o = data.overall;
-  var pctClass = o.pct_qr >= 95 ? '' : o.pct_qr >= 50 ? 'pct-mid' : 'pct-bad';
+  var pctClass = qrPctClass(o.pct_qr) === 'pct-good' ? '' : qrPctClass(o.pct_qr);
   pctEl.textContent = o.pct_qr.toFixed(1) + '%';
   pctEl.className = 'sqs-overall-pct ' + pctClass;
   detailEl.textContent = o.machine_count + ' เครื่อง · ' + o.total + ' panels · ' + o.ok + ' OK / ' + o.err + ' Err';
@@ -3421,7 +3708,7 @@ function renderSidebarQr(data) {
   // List top 20 machines
   var html = '';
   data.by_machine.slice(0, 20).forEach(function(m) {
-    var mpctClass = m.pct_qr >= 95 ? 'pct-good' : m.pct_qr >= 50 ? 'pct-mid' : 'pct-bad';
+    var mpctClass = qrPctClass(m.pct_qr);
     html += '<div class="sqs-machine-item" title="' + escH(m.machine_name) + '">' +
       '<span class="sqs-machine-id">' + escH(m.machine_name || m.machine_id) + '</span>' +
       '<span class="sqs-machine-pct ' + mpctClass + '">' + m.pct_qr.toFixed(1) + '%</span>' +
@@ -3745,37 +4032,7 @@ var ZONE_COLORS = [
   {name:'Zone 15', emoji:'🟩', fill:'rgba(0,200,100,0.12)',   border:'rgba(0,200,100,0.5)'},   /* 🟩 Dark Green */
   {name:'Zone 16', emoji:'🔴', fill:'rgba(200,50,50,0.12)',   border:'rgba(200,50,50,0.5)'},   /* 🔴 Dark Red */
 ];
-var ZONE_PRESETS = {
-  'PA01': {
-    1: [
-      {name:'Drilling', nameKey:'zoneDrilling',                     fill:'rgba(255,212,59,0.12)',  border:'rgba(220,170,30,0.5)',  points:[{x:41.6,y:51.2},{x:26.1,y:51.2},{x:25.9,y:44.4},{x:11.1,y:44.1},{x:11.3,y:19},{x:15.5,y:19.1},{x:15.6,y:12.6},{x:37.5,y:12.8},{x:37.3,y:30.6},{x:41.6,y:30.6}]},
-      {name:'Lamination', nameKey:'zoneLamination',                   fill:'rgba(210,168,255,0.12)',  border:'rgba(210,168,255,0.5)',  points:[{x:11,y:44.5},{x:25.8,y:44.7},{x:25.9,y:51.6},{x:46.7,y:51.6},{x:46.7,y:81.9},{x:42,y:81.7},{x:41.9,y:74},{x:10.9,y:74.1}]},
-      {name:'Press machine', nameKey:'zonePressMachine',                fill:'rgba(63,185,80,0.15)',  border:'rgba(63,185,80,0.5)',  points:[{x:19.7,y:74.3},{x:41.8,y:74.3},{x:41.8,y:81.9},{x:19.6,y:81.7}]},
-      {name:'Plasma', nameKey:'zonePlasma',                       fill:'rgba(220,38,38,0.12)', border:'rgba(220,38,38,0.5)', points:[{x:37.7,y:12.9},{x:46.7,y:13},{x:46.6,y:30.4},{x:37.6,y:30.4}]},
-      {name:'PT Copper plating', nameKey:'zonePTCopperPlating',            fill:'rgba(240,136,62,0.15)', points:[{x:41.6,y:30.6},{x:46.6,y:30.8},{x:46.6,y:51.5},{x:41.5,y:51.5}],labelRotate:-90},
-      {name:'Copper plating', nameKey:'zoneCopperPlating',               fill:'rgba(240,136,62,0.15)',border:'rgba(240,136,62,0.5)',points:[{x:47.7,y:12.7},{x:65.2,y:12.8},{x:65.4,y:69.8},{x:47.5,y:69.4}]},
-      {name:'Copper plating II', nameKey:'zoneCopperPlatingII',            fill:'rgba(240,136,62,0.15)',border:'rgba(240,136,62,0.5)',points:[{x:65.6,y:12.5},{x:72.8,y:12.5},{x:72.7,y:47.4},{x:65.6,y:46.7}],labelRotate:-90},
-      {name:'16-axis grinding', nameKey:'zone16AxisGrinding',             fill:'rgba(240,136,62,0.15)',border:'rgba(240,136,62,0.5)',points:[{x:71.8,y:47.2},{x:66.2,y:47.2},{x:66.2,y:69.6},{x:72.1,y:69.6}],labelRotate:-90},
-      {name:'Plug hole', nameKey:'zonePlugHole',                    fill:'rgba(240,136,62,0.15)', border:'rgba(240,136,62,0.5)',points:[{x:48.7,y:71.7},{x:67.9,y:71.8},{x:67.9,y:81.9},{x:48.7,y:82}]},
-      {name:'DES Inner layer', nameKey:'zoneDESInnerLayer',              fill:'rgba(240,136,62,0.15)', border:'rgba(240,136,62,0.5)',points:[{x:86.1,y:39.7},{x:91,y:39.7},{x:91.1,y:71.6},{x:86.1,y:71.3}],labelRotate:-90},
-      {name:'Inner layer & oute layer', nameKey:'zoneInnerOuterLayer',     fill:'rgba(88,166,255,0.12)', border:'rgba(88,166,255,0.5)',points:[{x:85.5,y:69.5},{x:74.1,y:69.3},{x:73.9,y:9.8},{x:94.6,y:10.5},{x:94.5,y:71.8},{x:91.5,y:71.4},{x:91.3,y:39.4},{x:85.6,y:38.9}],labelDy:-15},
-      {name:'AOI', nameKey:'zoneAOI',                          fill:'rgba(63,185,80,0.15)',  border:'rgba(63,185,80,0.5)',  points:[{x:72.3,y:71.7},{x:94.6,y:71.7},{x:94.6,y:81.8},{x:72.2,y:81.7}]},
-    ],
-    2: [
-      {name:'DES', nameKey:'zoneDES', fill:'rgba(240,136,62,0.12)', border:'rgba(240,136,62,0.5)', points:[{x:34.6,y:50.9},{x:25.3,y:50.8},{x:25.4,y:82},{x:34.1,y:82}]},
-      {name:'VCP', nameKey:'zoneVCP', fill:'rgba(100,180,255,0.12)', border:'rgba(100,180,255,0.5)', points:[{x:7.8,y:71.4},{x:5.8,y:71.5},{x:6.2,y:17.8},{x:17.8,y:18.3},{x:17.4,y:63.7},{x:7.6,y:63.7}]},
-      {name:'Lamination', nameKey:'zoneLamination', fill:'rgba(210,168,255,0.12)', border:'rgba(210,168,255,0.5)', points:[{x:34.8,y:53.5},{x:44.4,y:53.5},{x:44.5,y:82},{x:34.4,y:82}]},
-      {name:'Routing', nameKey:'zoneRouting', fill:'rgba(255,198,88,0.12)', border:'rgba(255,198,88,0.5)', points:[{x:45.7,y:53.2},{x:45.7,y:82.1},{x:58,y:82},{x:57.9,y:53.3}]},
-      {name:'Surface Treatment', nameKey:'zoneSurfaceTreatment', fill:'rgba(255,123,114,0.12)', border:'rgba(255,123,114,0.5)', points:[{x:64.3,y:41.1},{x:73,y:41.2},{x:72.8,y:82},{x:58.2,y:81.9},{x:58.2,y:53.5},{x:64.8,y:53.4},{x:64.2,y:53.1}]},
-      {name:'Solder mask', nameKey:'zoneSolderMask', fill:'rgba(100,180,255,0.12)', border:'rgba(100,180,255,0.5)', points:[{x:73.3,y:41.3},{x:73.2,y:81.9},{x:92.8,y:81.9},{x:92.8,y:41.2}]},
-      {name:'E-Test Final Inspection', nameKey:'zoneETestFinalInspection', fill:'rgba(165,214,255,0.12)', border:'rgba(165,214,255,0.5)', points:[{x:92.7,y:40.8},{x:64,y:40.7},{x:63.9,y:53.1},{x:46.9,y:53},{x:46.9,y:22.2},{x:92.5,y:22.5}]},
-      {name:'Electroplating', nameKey:'zoneElectroplating', fill:'rgba(255,212,59,0.12)', border:'rgba(220,170,30,0.5)', points:[{x:46.8,y:22.1},{x:34.9,y:22.2},{x:34.8,y:53},{x:46.7,y:53}]},
-      {name:'Layer', nameKey:'zoneLayer', fill:'rgba(88,166,255,0.12)', border:'rgba(88,166,255,0.5)', points:[{x:25.1,y:51.2},{x:25.1,y:82},{x:11.4,y:82},{x:11.4,y:65.9},{x:18.8,y:66},{x:18.9,y:51.9},{x:18.9,y:51.3}]},
-      {name:'Copper Plating', nameKey:'zoneCopperPlating2', fill:'rgba(180,120,255,0.12)', border:'rgba(180,120,255,0.5)', points:[{x:34.2,y:11.7},{x:17.9,y:11.7},{x:18,y:51},{x:34.6,y:50.7}]},
-      {name:'Traywashing', nameKey:'zoneTraywashing', fill:'rgba(63,185,80,0.12)', border:'rgba(63,185,80,0.5)', points:[{x:8.9,y:66.3},{x:8.8,y:81.8},{x:10.9,y:81.8},{x:11.1,y:66.5}]},
-    ],
-  }
-};
+var ZONE_PRESETS = {};  /* ★ โหลดจาก GET /api/layout — ตัวไฟล์จริงคือ backend/config/zones.json */
 var zoneEditMode = false;
 var zoneVisible = true;
 var zonePoints = [];
@@ -4060,35 +4317,105 @@ function renameZone(id, newName) {
   saveZones(zones);
 }
 
+/* ★ สิ่งที่รอบันทึกลง server — ตั้งค่าโดย exportZones() / exportMachines() */
+var _pendingLayoutSave = null;
+
 function exportZones() {
   var presets = (ZONE_PRESETS[curFactory] && ZONE_PRESETS[curFactory][curFloor]) || [];
   var customs = loadZones();
-  var allZones = presets.concat(customs);
+  /* ★ [FIX] ต้องกรอง preset ที่ถูกลบออกด้วย (กฎเดียวกับ renderZones)
+     ของเดิม concat ดื้อ ๆ → โซนที่ลบไปแล้วกลับมาทุกครั้งที่ export */
+  var deleted = JSON.parse(localStorage.getItem('deletedZones_' + curFactory + '_' + curFloor) || '[]');
+  var keptPresets = presets.filter(function(z, idx) { return deleted.indexOf('preset_' + idx) === -1; });
+  var allZones = keptPresets.concat(customs).filter(function(z) { return z && z.points && z.points.length >= 3; });
   if (allZones.length === 0) { alert(t('noZonesYet')); return; }
-  var lines = [];
-  lines.push("var ZONE_PRESETS = {");
-  lines.push("  '" + curFactory + "': {");
-  lines.push("    " + curFloor + ": [");
-  allZones.forEach(function(z) {
-    if (!z.points) return;
-    var name = z.name.replace(/'/g, "\\'");
-    var pts = z.points.map(function(pt) { return '{x:' + pt.x + ',y:' + pt.y + '}'; }).join(',');
-    lines.push("      {name:'" + zoneName(z) + "', fill:'" + z.fill + "', border:'" + z.border + "', points:[" + pts + "]},");
+
+  var payload = allZones.map(function(z) {
+    var o = {
+      /* ★ เก็บ name ดิบ + nameKey ไว้ ไม่ใช่ zoneName(z) ที่แปลแล้ว
+         ไม่งั้นเซฟตอนภาษาอังกฤษทีเดียว โซนจะกลายเป็นชื่ออังกฤษตายตัวถาวร */
+      name: z.name,
+      points: z.points.map(function(p) { return { x: p.x, y: p.y }; })
+    };
+    if (z.nameKey) o.nameKey = z.nameKey;
+    if (z.fill) o.fill = z.fill;
+    if (z.border) o.border = z.border;
+    if (typeof z.labelRotate === 'number') o.labelRotate = z.labelRotate;
+    return o;
   });
-  lines.push("    ],");
-  lines.push("    " + (curFloor === 1 ? 2 : 1) + ": []");
-  lines.push("  }");
-  lines.push("};");
-  var code = lines.join('\n');
+
+  _pendingLayoutSave = { kind: 'zones', factory: curFactory, floor: curFloor, zones: payload };
+  showLayoutModal(t('zoneExportTitle'), t('zoneExportDesc'), JSON.stringify(payload, null, 2));
+}
+
+function showLayoutModal(title, desc, code) {
+  var modal = document.getElementById('zone-export-modal');
+  if (!modal) return;
+  var h3 = modal.querySelector('h3');
+  if (h3) h3.textContent = title;
+  var descEl = modal.querySelector('div[style*="font-size:11px"]');
+  if (descEl) descEl.innerHTML = desc;
   var codeEl = document.getElementById('zone-export-code');
   if (codeEl) codeEl.textContent = code;
-  var modal = document.getElementById('zone-export-modal');
-  if (modal) modal.classList.add('show');
+  setLayoutStatus('', '');
+  var saveBtn = document.getElementById('zone-export-save');
+  if (saveBtn) saveBtn.disabled = false;
+  modal.classList.add('show');
+}
+
+function setLayoutStatus(msg, color) {
+  var el = document.getElementById('zone-export-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.color = color || 'var(--muted)';
+}
+
+/* ★ บันทึกผังลงไฟล์ JSON บน server — แทนการ copy-paste โค้ดกลับมาแปะใน index.html */
+function saveLayoutFromModal() {
+  var p = _pendingLayoutSave;
+  if (!p) return;
+  var saveBtn = document.getElementById('zone-export-save');
+  if (saveBtn) saveBtn.disabled = true;
+  setLayoutStatus(t('layoutSaving'), 'var(--muted)');
+
+  var url = (window.API_BASE || location.origin) + '/api/layout/' + p.kind;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(p)
+  })
+    .then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        return j;
+      });
+    })
+    .then(function(j) {
+      setLayoutStatus(t('layoutSaveOk') + ' (' + j.count + ')', 'var(--ok, #3fb950)');
+      /* อัปเดตข้อมูลในหน้าให้ตรงกับที่เพิ่งเซฟ */
+      if (p.kind === 'zones') {
+        if (!ZONE_PRESETS[p.factory]) ZONE_PRESETS[p.factory] = {};
+        ZONE_PRESETS[p.factory][p.floor] = p.zones;
+        /* โซนที่เคยเป็น custom/deleted กลายเป็น preset บน server แล้ว → ล้างของใน localStorage ไม่ให้ซ้อนกัน */
+        try {
+          localStorage.removeItem(getZoneStorageKey());
+          localStorage.removeItem('deletedZones_' + p.factory + '_' + p.floor);
+        } catch (e) {}
+        renderZones();
+      }
+      _pendingLayoutSave = null;
+    })
+    .catch(function(e) {
+      console.error('[Layout] save failed:', e.message);
+      setLayoutStatus(t('layoutSaveFail') + ': ' + e.message, '#f85149');
+      if (saveBtn) saveBtn.disabled = false;
+    });
 }
 
 function closeZoneExport() {
   var modal = document.getElementById('zone-export-modal');
   if (modal) modal.classList.remove('show');
+  _pendingLayoutSave = null;
 }
 
 function copyZoneExport() {
@@ -4202,7 +4529,10 @@ document.addEventListener('DOMContentLoaded', function() {
   var mapEl = document.getElementById('map');
   if (!mapEl) return;
 
-  mapEl.addEventListener('mousedown', function(e) {
+  /* ★ ใช้ Pointer Events แทน mouse events — ครอบคลุมทั้งเมาส์ ปากกา และนิ้ว ด้วยโค้ดชุดเดียว
+     ของเดิมผูกกับ mousedown/mousemove/mouseup ล้วน → ลากเครื่องบนมือถือ/แท็บเล็ตไม่ได้เลย
+     (พฤติกรรมบน PC เหมือนเดิมทุกอย่าง เพราะเมาส์ก็ยิง pointer event ให้อยู่แล้ว) */
+  mapEl.addEventListener('pointerdown', function(e) {
     if (!machineDragMode) return;
     var mkEl = e.target.closest('.mk');
     if (!mkEl) return;
@@ -4213,9 +4543,11 @@ document.addEventListener('DOMContentLoaded', function() {
     mkEl.classList.add('dragging');
     dragStartX = e.clientX;
     dragStartY = e.clientY;
+    /* จับ pointer ไว้กับ element — นิ้วเลื่อนออกนอกมาร์กเกอร์แล้วยังลากต่อได้ */
+    try { mkEl.setPointerCapture(e.pointerId); } catch (err) {}
   });
 
-  document.addEventListener('mousemove', function(e) {
+  document.addEventListener('pointermove', function(e) {
     if (!machineDragMode || !draggingMachine) return;
     /* Mark as moved if cursor moved more than 3px from start (avoids micro-jitter) */
     if (Math.abs(e.clientX - dragStartX) > 3 || Math.abs(e.clientY - dragStartY) > 3) {
@@ -4231,7 +4563,14 @@ document.addEventListener('DOMContentLoaded', function() {
     draggingMachine.style.top = y + '%';
   });
 
-  document.addEventListener('mouseup', function(e) {
+  document.addEventListener('pointercancel', function() {
+    if (!draggingMachine) return;
+    draggingMachine.classList.remove('dragging');
+    draggingMachine = null;
+    _dragMoved = false;
+  });
+
+  document.addEventListener('pointerup', function(e) {
     if (!draggingMachine) return;
     /* บันทึกตำแหน่งใหม่ — only if actually moved */
     if (_dragMoved) {
@@ -4271,31 +4610,22 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-/* Export machine positions → สร้างโค้ด MACHINES_DB */
+/* บันทึกตำแหน่งเครื่องจักรลง backend/config/machines.json */
 function exportMachines() {
   if (!curFactory || !curFloor) { alert(t('selectFactoryFirst')); return; }
   var machines = currentMachines();
   if (machines.length === 0) { alert('ไม่มีเครื่องในชั้นนี้'); return; }
 
-  var lines = [];
-  lines.push("// "+curFactory+" - Floor "+curFloor+" ("+machines.length+" machines)");
-  lines.push("// คัดลอกไปวางแทนที่ MACHINES_DB['"+curFactory+"']["+curFloor+"] ใน index.html");
-  machines.forEach(function(m) {
-    lines.push("      {id:'"+m.id+"',name:'"+m.name+"',type:'"+m.type+"',zone:'"+m.zone+"',x:"+m.x+",y:"+m.y+"},");
+  var payload = machines.map(function(m) {
+    return { id: m.id, name: m.name, type: m.type, zone: m.zone, x: m.x, y: m.y };
   });
 
-  var code = lines.join('\n');
-  var codeEl = document.getElementById('zone-export-code');
-  if (codeEl) codeEl.textContent = code;
-  var modal = document.getElementById('zone-export-modal');
-  if (modal) {
-    /* เปลี่ยน title */
-    var h3 = modal.querySelector('h3');
-    if (h3) h3.textContent = t('machineExportTitle');
-    var desc = modal.querySelector('div[style*="font-size:11px"]');
-    if (desc) desc.innerHTML = 'วางโค้ดนี้แทนที่ <code style="color:var(--accent)">MACHINES_DB[\''+curFactory+'\']['+curFloor+']</code> ใน index.html';
-    modal.classList.add('show');
-  }
+  _pendingLayoutSave = { kind: 'machines', factory: curFactory, floor: curFloor, machines: payload };
+  showLayoutModal(
+    t('machineExportTitle') + ' — ' + curFactory + ' / ' + curFloor + 'F (' + payload.length + ')',
+    t('zoneExportDesc'),
+    JSON.stringify(payload, null, 2)
+  );
 }
 
 /* ★ Zone click + mousemove handler — registered at top level (after mapEl is defined)
@@ -4306,14 +4636,16 @@ function exportMachines() {
   if (mapEl2) {
     /* Capture phase = true → run BEFORE other handlers, ensuring zone clicks
        are processed first when in zone edit mode */
-    mapEl2.addEventListener('mousedown', function(e) {
+    /* ★ Pointer Events — วาดโซนด้วยนิ้วบนแท็บเล็ตได้ (เดิมเป็น mouse-only) */
+    mapEl2.addEventListener('pointerdown', function(e) {
       if (!zoneEditMode) return;
       e.preventDefault();
       e.stopPropagation();
       handleZoneClick(e);
     }, true); /* capture phase */
-    mapEl2.addEventListener('mousemove', function(e) {
-      if (zoneEditMode) updateZoneTemp(e);
+    mapEl2.addEventListener('pointermove', function(e) {
+      /* เส้นพรีวิวตามเคอร์เซอร์มีความหมายเฉพาะกับเมาส์/ปากกา — นิ้วไม่มี hover */
+      if (zoneEditMode && e.pointerType !== 'touch') updateZoneTemp(e);
     });
   }
   /* Esc to exit zone editor, E to export, Enter to finish */
@@ -4519,13 +4851,50 @@ function updatePopOutBtnIcon() {
 })();
 
 /* ═══════ BOOT ═══════ */
-buildProcessUI();
-initStates();
-renderFactoryList();
-connectWS();
-/* Apply initial language to search placeholder */
-document.getElementById('machineSearch').setAttribute('data-i18n-ph','search');
-setLang(curLang);
+/* ★ โหลดผังเครื่องจักร/โซนจาก server ก่อน แล้วค่อย boot
+   (ข้อมูลอยู่ที่ backend/config/machines.json + zones.json — ไม่ได้ฝังใน index.html แล้ว) */
+function boot(){
+  buildProcessUI();
+  initStates();
+  renderFactoryList();
+  connectWS();
+  /* Apply initial language to search placeholder */
+  document.getElementById('machineSearch').setAttribute('data-i18n-ph','search');
+  setLang(curLang);
+}
+
+function showBootError(msg){
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#0d1117;color:#f85149;'
+    + 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;'
+    + 'font-family:system-ui,sans-serif;text-align:center;padding:24px';
+  el.innerHTML = '<div style="font-size:40px">⚠️</div>'
+    + '<div style="font-size:18px;font-weight:600">โหลดผังเครื่องจักรไม่ได้</div>'
+    + '<div style="font-size:13px;color:#8b949e;max-width:520px">' + msg + '</div>'
+    + '<div style="font-size:12px;color:#8b949e">ตรวจว่า server รันอยู่ และมีไฟล์ '
+    + '<code style="color:#58a6ff">backend/config/machines.json</code> อยู่จริง</div>';
+  document.body.appendChild(el);
+}
+
+fetch((window.API_BASE || location.origin) + '/api/layout')
+  .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(function(data){
+    MACHINES_DB  = (data && data.machines) || {};
+    ZONE_PRESETS = (data && data.zones)    || {};
+    /* ★ เกณฑ์สี %QR มาจาก .env ฝั่ง backend (QR_TARGET_PCT) */
+    if (data && data.qr_target_pct != null) {
+      QR_TARGET_PCT = parseFloat(data.qr_target_pct) || QR_TARGET_PCT;
+      console.log('[QR] target =', QR_TARGET_PCT + '%');
+    }
+    if (Object.keys(MACHINES_DB).length === 0) {
+      console.warn('[Layout] /api/layout ตอบกลับมาแต่ไม่มีเครื่องจักรเลย');
+    }
+    boot();
+  })
+  .catch(function(e){
+    console.error('[Layout] โหลด /api/layout ไม่สำเร็จ:', e.message);
+    showBootError('เชื่อมต่อ ' + (window.API_BASE || location.origin) + '/api/layout ไม่ได้ (' + e.message + ')');
+  });
 
 window.addEventListener('resize',function(){if(curFloor){fitImage();fitMiniMap();renderMarkers();updateMiniMap()}});
 </script>

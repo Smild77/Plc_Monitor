@@ -42,20 +42,30 @@ Frontend Dashboard (index.html)
 - % QR รวมของทุกเครื่อง (กดรีเฟรชได้)
 - สรุปรายวัน (3 วัน) — Lots / Panels / Alarms
 
+### รองรับมือถือ / แท็บเล็ต
+- **ลากนิ้วเดียว** = เลื่อนแผนที่ · **สองนิ้ว (pinch)** = ซูมเข้า/ออก · **แตะสองครั้ง** = ซูมเข้า (แตะซ้ำตอนซูมสุด = กลับ 100%)
+  จุดที่นิ้วจับอยู่จะอยู่กับที่ระหว่างซูม และใช้ค่า scale/pan ชุดเดียวกับเมาส์ ไม่ได้แยกโค้ดคนละทาง
+- Layout ปรับตามขนาดจอ 3 ระดับ: แท็บเล็ต (≤768px) → sidebar เป็น overlay, info-panel เป็น bottom sheet, ปุ่มขยายเป็น 44px
+  · มือถือจอแคบ (≤480px) → ซ่อน mini-map, ย่อ header, ตารางเลื่อนแนวนอนในกล่องตัวเอง
+  · มือถือแนวนอน (สูง ≤500px) → ลดความสูง header, ซ่อน legend
+- Zone Editor / Machine Drag ใช้ Pointer Events → วาดโซนและลากเครื่องด้วยนิ้วบนแท็บเล็ตได้
+
 ### เครื่องมือบนแผนที่
 - Zoom In / Out / Reset (+ / − / 0)
 - ถ่ายภาพหน้าจอเป็น PNG (P)
 - แสดง/ซ่อน Zone
 - Admin Mode (กด `A` + รหัสผ่าน `admin`):
-  - Zone Editor — วาด/แก้ไข/Export zone
-  - Machine Drag — ย้ายตำแหน่งเครื่องจักรบนแผนที่
-  - Export ตำแหน่งเครื่องจักร
+  - Zone Editor — วาด / แก้ไข / ลบโซน (กด `E` เพื่อเปิดหน้าต่างบันทึก)
+  - Machine Drag — ลากย้ายตำแหน่งเครื่องจักรบนแผนที่ (กด `M` เพื่อเปิดหน้าต่างบันทึก)
+  - **บันทึกลง Server** — เขียนลง `backend/config/machines.json` / `zones.json` โดยตรง
+    ทุกคนที่เปิดหน้านี้จะเห็นผังใหม่ทันทีหลังรีเฟรช ไม่ต้อง copy-paste โค้ดกลับมาแปะใน `index.html` อีก
+    (ยังกด "คัดลอก JSON" เก็บไว้เองได้ถ้าต้องการ)
 
 ### อื่น ๆ
 - ค้นหาเครื่องจักร (กด `/` แล้วพิมพ์)
 - Alert Panel — แจ้งเตือนเครื่องที่มีปัญหา
 - รองรับ 3 ภาษา: ไทย / English / 中文
-- ทำงานในเครือข่ายภายในได้ (ไม่ต้องเน็ต, ใช้ฟอนต์ระบบ)
+- ทำงานในเครือข่ายภายในได้ 100% (ไม่ต้องต่อเน็ต — ใช้ฟอนต์ระบบ และไลบรารีภายนอกเก็บไว้ใน `frontend/vendor/` ไม่ได้ดึงจาก CDN)
 
 ## วิธีรัน
 
@@ -66,25 +76,34 @@ npm install
 ```
 
 ### 2. ตั้งค่า Oracle credentials
-สร้างไฟล์ `backend/.env`:
+คัดลอกไฟล์ตัวอย่างแล้วใส่ค่าจริง:
+```bash
+copy .env.example .env
+```
+
+`backend/.env.example` มีคำอธิบายทุกตัวแปรอยู่แล้ว ตัวที่จำเป็นจริง ๆ มีแค่ 3 ตัว:
 ```env
 ORACLE_CONNECTION_STRING=pafabdb01.eavarytech.com:1521/parpbn08
 ORACLE_USER=INTELLIGENT_READ_PA01_PRD
 ORACLE_PASSWORD=your_password_here
-POLL_MINUTES=2
-POLL_INTERVAL_MS=3000
-PORT=3001
-# optional
-STALE_MINUTES=2
-ALLOWED_MACHINES=MC001,MC002
-# กล้อง NVR (ไม่ใส่ = ปิดฟีเจอร์ดูกล้อง)
-NVR_HOST=
-NVR_PORT=80
-NVR_USER=
-NVR_PASSWORD=
 ```
 
+ตัวเลือกอื่นที่ใช้บ่อย:
+
+| ตัวแปร | ค่าเริ่มต้น | ความหมาย |
+|--------|------------|----------|
+| `PORT` | 3001 | พอร์ตของ server |
+| `POLL_INTERVAL_MS` | 3000 | poll Oracle ทุกกี่มิลลิวินาที |
+| `POLL_MINUTES` | 2 | แต่ละรอบ poll มองย้อนหลังกี่นาที |
+| `STALE_MINUTES` | = POLL_MINUTES | ไม่มีข้อมูลเกินกี่นาที = NO_DATA |
+| `POLL_TIMEOUT_MS` | 15000 | query ของ poll ใช้เวลาได้สูงสุดเท่าไร เกินนี้ยกเลิกแล้วให้รอบถัดไปทำต่อ |
+| `WS_HEARTBEAT_MS` | 30000 | ส่ง ping หา WebSocket client ทุกกี่มิลลิวินาที (ไม่ตอบ = ตัดทิ้ง) |
+| `QR_LOG_RETENTION_DAYS` | 30 | เก็บไฟล์ QR log กี่วัน (ลบอัตโนมัติตอน start และวันละครั้งหลังจากนั้น) |
+| `ALLOWED_MACHINES` | (ว่าง = ทุกเครื่อง) | จำกัดเฉพาะบางเครื่อง คั่นด้วย comma |
+| `NVR_HOST` / `NVR_USER` / `NVR_PASSWORD` | (ว่าง) | กล้อง NVR — เว้นว่าง = ปิดฟีเจอร์ดูกล้อง |
+
 ต้องเชื่อม VPN/เครือข่ายภายในก่อน ไม่งั้นเข้า Oracle ไม่ได้
+(ถ้า Oracle ยังไม่ติด server จะยัง start ได้ปกติแล้ว retry ให้ทุก 30 วินาที)
 
 ### 3. รันเซิร์ฟเวอร์
 
@@ -99,6 +118,11 @@ npm start
 โหมดพัฒนา (auto-reload):
 ```bash
 npm run dev
+```
+
+ตรวจว่าโค้ดยังทำงานถูกต้องหลังแก้ (ไม่ต้องต่อ Oracle):
+```bash
+npm test
 ```
 
 รันสำเร็จแล้ว server จะแสดง LAN IP ทั้งหมดที่คนในวงเครือข่ายเดียวกันเข้าได้ ส่ง URL นั้นให้เพื่อนร่วมงานได้เลย
@@ -180,6 +204,9 @@ http://localhost:3001/
 | `GET /api/qr-summary?range=today` | สรุป % QR รวมทุกเครื่อง (สำหรับ sidebar) |
 | `GET /api/qr-export?machine_id=X&range=today` | Export ประวัติ QR เป็น CSV (download) |
 | `GET /api/qr-logs/qr-YYYY-MM-DD.csv` | ดาวน์โหลดไฟล์ QR log รายวัน |
+| `GET /api/layout` | ผังเครื่องจักร + โซนทั้งหมด (frontend โหลดตอน boot) — อ่านจาก `backend/config/machines.json` + `zones.json` |
+| `POST /api/layout/machines` | บันทึกตำแหน่งเครื่องจักรของ 1 ชั้น — body: `{factory, floor, machines:[{id,name,type,zone,x,y}]}` |
+| `POST /api/layout/zones` | บันทึกโซนของ 1 ชั้น — body: `{factory, floor, zones:[{name,nameKey?,fill,border,points:[{x,y}]}]}` |
 | `GET /api/camera-map` | รายชื่อเครื่องที่ map กล้องไว้ (frontend ใช้ตัดสินใจโชว์ปุ่ม 📹) |
 | `GET /api/camera-live?machine_id=X` | Live view กล้อง (MJPEG, proxy ผ่าน server) — ต้องมี mapping ใน `camera-map.json` |
 | `GET /api/camera-playback?machine_id=X&time=ISO` | วิดีโอย้อนหลัง ณ เวลาที่ระบุ (ค้นหาคลิป ±5 นาทีรอบเวลานั้น) |
@@ -187,6 +214,9 @@ http://localhost:3001/
 | `ws://localhost:3001/ws` | WebSocket สำหรับ real-time updates (push SNAPSHOT + CHANGES) |
 
 ค่า `range` ที่รองรับ: `today` (default) / `yesterday` / `week` (7 วัน) / `month` (30 วัน) หรือกำหนด `start_date` + `end_date` (YYYY-MM-DD) เอง
+
+`POST /api/layout/*` เขียนทับเฉพาะ factory/floor ที่ส่งมา ชั้นอื่นในไฟล์ไม่ถูกแตะ และสำรองไฟล์เดิมไว้เป็น `.bak` ให้อัตโนมัติ
+ถ้าค่าไม่ผ่านการตรวจ (พิกัดนอกช่วง 0-100, ไม่มี id, โซนมีน้อยกว่า 3 จุด) จะตอบ 400 พร้อมบอกว่าแถวไหนผิด — ไฟล์เดิมไม่ถูกแก้
 
 ## การปรับแต่ง Polling
 
@@ -210,6 +240,8 @@ http://localhost:3001/
 | `F` | เปิด/ปิด Sidebar |
 | `P` | ถ่ายภาพหน้าจอ (PNG) |
 | `A` | เข้า Admin Mode (ต้องใส่รหัสผ่าน) |
+| `E` | (Admin + Zone Editor) เปิดหน้าต่างบันทึกโซนลง server |
+| `M` | (Admin + Machine Drag) เปิดหน้าต่างบันทึกตำแหน่งเครื่องจักรลง server |
 | `/` | โฟกัสช่องค้นหา |
 | `?` | แสดงคำแนะนำปุ่มลัด |
 | `Esc` | ปิด popup / alert / ออกจากช่องค้นหา |
@@ -220,7 +252,9 @@ http://localhost:3001/
 - Frontend: HTML/CSS/JavaScript ล้วน (ไม่มี framework, ไม่มี build step)
 - Database: Oracle (read-only จาก `PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL`, `EAP_EQP_ALM`, `EAP_EQP_TRACE`, `DWD_PA01_PRD.LOTINFO_MAIN`)
 - Realtime: WebSocket push + change detection (ส่งเฉพาะที่เปลี่ยน, ลด bandwidth)
-- Resilience: Oracle disconnect → retry ทุก 30 วินาทีอัตโนมัติ (server ไม่ exit)
+- Resilience: Oracle disconnect → retry ทุก 30 วินาทีอัตโนมัติ (server ไม่ exit),
+  poll watchdog ตัด query ที่ค้าง, WebSocket heartbeat ตัด client ที่ตายแล้วทิ้ง
+- Static files: serve แบบ stream + ETag/304 + `Cache-Control` (รูปแผนที่ cache 1 วัน)
 - QR Log: เขียนไฟล์ CSV รายวันที่ `backend/qr-logs/` อัตโนมัติ (เก็บ 30 วัน)
 
 ## โครงสร้างโปรเจกต์
@@ -230,6 +264,7 @@ plc-full-project/
 ├── backend/
 │   ├── eap-server.js           ← main entry point (HTTP + WS + Oracle poll)
 │   ├── .env                    ← Oracle credentials + config (git-ignored)
+│   ├── .env.example            ← ตัวอย่าง .env พร้อมคำอธิบายทุกตัวแปร (คัดลอกไปเป็น .env)
 │   ├── start-server.bat        ← ตัวเริ่มเซิร์ฟเวอร์บน Windows
 │   ├── package.json
 │   │
@@ -237,8 +272,10 @@ plc-full-project/
 │   │   ├── hikvision.js        ← ISAPI client (digest auth + live/playback) สำหรับกล้อง NVR
 │   │   └── evidence-pack.js    ← Vendor Evidence Pack: query + PDF generation (pdfkit)
 │   │
-│   ├── config/
-│   │   └── camera-map.json     ← mapping machine_id → channel กล้องใน NVR (แก้ได้โดยไม่ต้อง restart)
+│   ├── config/                 ← ไฟล์ตั้งค่าที่แก้ได้โดยไม่ต้อง restart (อ่านใหม่ทุกครั้งที่เรียก)
+│   │   ├── camera-map.json     ← mapping machine_id → channel กล้องใน NVR
+│   │   ├── machines.json       ← ผังเครื่องจักร (id/name/type/zone/x/y) แยกตามโรงงาน+ชั้น
+│   │   └── zones.json          ← รูปหลายเหลี่ยมของโซนบนแผนที่ แยกตามโรงงาน+ชั้น
 │   │
 │   ├── sql/                    ← SQL ที่รันมือ ไม่ได้ถูกเรียกจากโค้ด
 │   │   ├── oracle_setup.sql    ← สร้างตาราง History + index + GRANT + purge job
@@ -254,6 +291,7 @@ plc-full-project/
 │   │   ├── check-evidence-setup.js    ← ตรวจว่า Evidence Pack พร้อมใช้หรือยัง
 │   │   ├── list-alarm-codes.js        ← สำรวจรูปแบบ ALARM_TEXT ใน EAP_EQP_ALM
 │   │   ├── seed-fault-zone-map.js     ← สร้าง data/fault-zone-map-seed.csv ให้กรอก zone/severity/causes เอง
+│   │   ├── smoke-test.js              ← `npm test` — ตรวจ config/API/static/การบันทึกผัง (ไม่ต้องต่อ Oracle)
 │   │   ├── run-tools.bat              ← เมนูเลือกรัน (double-click ได้)
 │   │   └── output/             ← (auto, git-ignored) ผลลัพธ์ UTF-8 ของสคริปต์ข้างบน
 │   │
@@ -265,6 +303,9 @@ plc-full-project/
 │
 └── frontend/
     ├── index.html              ← Dashboard (HTML + CSS + JS ในไฟล์เดียว)
+    │                              ★ ผังเครื่องจักร/โซนไม่ได้ฝังในนี้แล้ว — โหลดจาก GET /api/layout ตอน boot
+    ├── vendor/                 ← ไลบรารีภายนอกที่เก็บไว้ในโปรเจกต์เอง (ไม่พึ่ง CDN — หน้างานไม่มีเน็ต)
+    │   └── html2canvas.min.js   ← ใช้โดยปุ่มถ่ายภาพหน้าจอ (P) — html2canvas 1.4.1, MIT
     ├── i18n/                   ← คำแปล โหลดผ่าน <script src="i18n/xx.js">
     │   ├── th.js               ← ภาษาไทย
     │   ├── en.js               ← ภาษาอังกฤษ

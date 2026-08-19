@@ -1,0 +1,1070 @@
+{
+  "PA01": {
+    "1": [
+      {
+        "id": "AOI-OUTAOI-01-L",
+        "name": "外层AOI（脱机）#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 92.4,
+        "y": 79.4
+      },
+      {
+        "id": "AOI-PEP-01-L",
+        "name": "内层PE冲孔（4CCD）投板机#1",
+        "type": "L",
+        "zone": "Zone-K",
+        "x": 83,
+        "y": 79.1
+      },
+      {
+        "id": "AOI-PEP-01-UL",
+        "name": "内层PE冲孔（4CCD）收板机#1",
+        "type": "UL",
+        "zone": "Zone-B",
+        "x": 83,
+        "y": 74.7
+      },
+      {
+        "id": "AOI-RESAOI-01-L",
+        "name": "塞孔AOI投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 62.2,
+        "y": 75.3
+      },
+      {
+        "id": "AOI-RESAOI-01-UL",
+        "name": "塞孔AOI收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 65.8,
+        "y": 74.9
+      },
+      {
+        "id": "DRL-INS-01-L",
+        "name": "DRL-INS-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 36.3,
+        "y": 25.1
+      },
+      {
+        "id": "DRL-INS-01-UL",
+        "name": "钻孔验孔#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 36.2,
+        "y": 20
+      },
+      {
+        "id": "ELC-DEP-01-L",
+        "name": "电镀水平D+P#1-投板机",
+        "type": "L",
+        "zone": "Zone-M",
+        "x": 51.7,
+        "y": 57.6
+      },
+      {
+        "id": "ELC-DEP-01-UL",
+        "name": "电镀水平D+P#1-收板机",
+        "type": "UL",
+        "zone": "Zone-K",
+        "x": 51.4,
+        "y": 14.3
+      },
+      {
+        "id": "ELC-INS-01-L",
+        "name": "电镀验孔机投板机#1",
+        "type": "L",
+        "zone": "Zone-I",
+        "x": 62.5,
+        "y": 78.4
+      },
+      {
+        "id": "ELC-INS-01-UL",
+        "name": "电镀验孔机收板机#1",
+        "type": "UL",
+        "zone": "Zone-J",
+        "x": 65.9,
+        "y": 78.4
+      },
+      {
+        "id": "ELC-PUL-01-L",
+        "name": "电镀VCP脉冲投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 55.4,
+        "y": 14.4
+      },
+      {
+        "id": "ELC-PUL-01-UL",
+        "name": "电镀VCP脉冲收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 55.4,
+        "y": 65.5
+      },
+      {
+        "id": "ELC-PUL-02-L",
+        "name": "电镀VCP脉冲投板机#2",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 58.2,
+        "y": 14.4
+      },
+      {
+        "id": "ELC-PUL-02-UL",
+        "name": "ELC-PUL-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 58.2,
+        "y": 66.6
+      },
+      {
+        "id": "ELC-RED-01-L",
+        "name": "电镀减铜线投板机#1",
+        "type": "L",
+        "zone": "Zone-E",
+        "x": 67.3,
+        "y": 52.2
+      },
+      {
+        "id": "ELC-RED-01-UL",
+        "name": "电镀减铜线收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 67.2,
+        "y": 66.5
+      },
+      {
+        "id": "ELC-RED-02-L",
+        "name": "ELC-RED-02-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 63.8,
+        "y": 50.9
+      },
+      {
+        "id": "ELC-RED-02-UL",
+        "name": "ELC-RED-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 63.7,
+        "y": 65.8
+      },
+      {
+        "id": "ELC-SES-01-L",
+        "name": "电镀SES线#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 66.4,
+        "y": 14.9
+      },
+      {
+        "id": "ELC-SES-01-UL",
+        "name": "电镀SES线#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 66.4,
+        "y": 46.5
+      },
+      {
+        "id": "ELC-TRE-01-L",
+        "name": "电镀前处理投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 43.6,
+        "y": 36.4
+      },
+      {
+        "id": "ELC-TRE-01-UL",
+        "name": "电镀前处理收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 43.5,
+        "y": 47.6
+      },
+      {
+        "id": "ELC-TRE-02-L",
+        "name": "ELC-TRE-02-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 46,
+        "y": 34.9
+      },
+      {
+        "id": "ELC-TRE-02-UL",
+        "name": "ELC-TRE-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 45.8,
+        "y": 48.7
+      },
+      {
+        "id": "LAM-BOP-01-L",
+        "name": "压合棕化线投板机#1",
+        "type": "L",
+        "zone": "Zone-I",
+        "x": 43.5,
+        "y": 76.4
+      },
+      {
+        "id": "LAM-BOP-01-UL",
+        "name": "LAM-BOP-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 43.4,
+        "y": 56.9
+      },
+      {
+        "id": "LAM-BOP-02-L",
+        "name": "压合棕化线投板机#2",
+        "type": "L",
+        "zone": "Zone-J",
+        "x": 45.8,
+        "y": 77.3
+      },
+      {
+        "id": "LAM-BOP-02-UL",
+        "name": "压合棕化线收板机#2",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 45.7,
+        "y": 56.8
+      },
+      {
+        "id": "LIN-INNDES-01-L",
+        "name": "内层DES for湿膜投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 90.3,
+        "y": 36.4
+      },
+      {
+        "id": "LIN-INNDES-01-UL",
+        "name": "内层AOI（在线）收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 90.4,
+        "y": 70.9
+      },
+      {
+        "id": "LIN-INNDES-02-L",
+        "name": "内层DES for湿膜投板机#2",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 88.1,
+        "y": 36.7
+      },
+      {
+        "id": "LIN-INNDES-02-UL",
+        "name": "内层AOI（在线）收板机#2",
+        "type": "UL",
+        "zone": "Zone-C",
+        "x": 87.6,
+        "y": 72.4
+      },
+      {
+        "id": "LIN-INNLDI-01-L",
+        "name": "投收一体机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 81,
+        "y": 29.4
+      },
+      {
+        "id": "LIN-INNLDI-02-L",
+        "name": "内层LDI#2",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 84.8,
+        "y": 29.6
+      },
+      {
+        "id": "LIN-INNLDI-03-L",
+        "name": "内层LDI#3",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 88.8,
+        "y": 29.6
+      },
+      {
+        "id": "LIN-OUTDES-01-L",
+        "name": "外层DES#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 92.6,
+        "y": 35.7
+      },
+      {
+        "id": "LIN-OUTDES-01-UL",
+        "name": "外层DES收板机-01",
+        "type": "UL",
+        "zone": "Zone-H",
+        "x": 92.6,
+        "y": 72.4
+      },
+      {
+        "id": "LIN-OUTDEV-01-L",
+        "name": "外层显影线投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 75.4,
+        "y": 33.2
+      },
+      {
+        "id": "LIN-OUTDEV-01-UL",
+        "name": "LIN-OUTDEV-01-UL",
+        "type": "UL",
+        "zone": "Zone-D",
+        "x": 74.9,
+        "y": 20.4
+      },
+      {
+        "id": "LIN-OUTTRE-01-L",
+        "name": "外层前处理投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 77.7,
+        "y": 67.2
+      },
+      {
+        "id": "LIN-OUTTRE-01-UL",
+        "name": "外层压膜机收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 78.3,
+        "y": 40.3
+      },
+      {
+        "id": "LIN-OUTTRE-02-UL",
+        "name": "LIN-OUTTRE-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 75.7,
+        "y": 40.4
+      },
+      {
+        "id": "LIN-INNTRE-01-UL",
+        "name": "内层涂布收板机#1",
+        "type": "UL",
+        "zone": "Zone-L",
+        "x": 84.7,
+        "y": 44.6
+      },
+      {
+        "id": "SMK-BRU-01-L",
+        "name": "塞孔十六轴研磨#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 70.3,
+        "y": 67.5
+      },
+      {
+        "id": "SMK-BRU-01-UL",
+        "name": "塞孔十六轴研磨收板机#1",
+        "type": "UL",
+        "zone": "Zone-F",
+        "x": 70.3,
+        "y": 49.4
+      },
+      {
+        "id": "SMK-BRU-02-UL",
+        "name": "塞孔十六轴研磨收板机#2",
+        "type": "UL",
+        "zone": "Zone-D",
+        "x": 63.6,
+        "y": 25.3
+      },
+      {
+        "id": "SMK-BRU-02-L",
+        "name": "塞孔十六轴研磨投板机#2",
+        "type": "L",
+        "zone": "Zone-K",
+        "x": 63.7,
+        "y": 45.8
+      },
+      {
+        "id": "CPP-VCP-03-L",
+        "name": "镀铜-VCP#3",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 61.1,
+        "y": 14.6
+      },
+      {
+        "id": "CPP-VCP-03-UL",
+        "name": "CPP-VCP-03-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 61,
+        "y": 62.8
+      },
+      {
+        "id": "LIN-INNTRE-01-L",
+        "name": "LIN-INNTRE-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 84.6,
+        "y": 68.4
+      },
+      {
+        "id": "LIN-INNTRE-02-L",
+        "name": "LIN-INNTRE-02-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 82.2,
+        "y": 64.5
+      },
+      {
+        "id": "LIN-INNTRE-02-UL-1",
+        "name": "内层前处理#2压膜机#1收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 80.2,
+        "y": 40.2
+      },
+      {
+        "id": "LIN-INNTRE-02-UL-2",
+        "name": "内层前处理#2压膜机#2收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 82.2,
+        "y": 40.2
+      },
+      {
+        "id": "LSR-Plasma-01-L",
+        "name": "雷射-Plasma#1-投收一体机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 44.4,
+        "y": 21.4
+      },
+      {
+        "id": "LAM-Cutgrind-01-UL",
+        "name": "LAM-Cutgrind-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 12.6,
+        "y": 54.9
+      },
+      {
+        "id": "load3",
+        "name": "load3",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 92.6,
+        "y": 29.6
+      },
+      {
+        "id": "load4",
+        "name": "load4",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 86.8,
+        "y": 22.4
+      },
+      {
+        "id": "load5",
+        "name": "load5",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 91.8,
+        "y": 22.3
+      },
+      {
+        "id": "load6",
+        "name": "load6",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 48.6,
+        "y": 14.7
+      },
+      {
+        "id": "load7",
+        "name": "load7",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 48.6,
+        "y": 66.5
+      }
+    ],
+    "2": [
+      {
+        "id": "ROU-RIN-01-UL",
+        "name": "电测板弯翘检测机收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 56.2,
+        "y": 71.1
+      },
+      {
+        "id": "SMK-LEGTUN-01-L",
+        "name": "文字隧道烤箱#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 74,
+        "y": 59.9
+      },
+      {
+        "id": "SMK-LEGTUN-01-UL",
+        "name": "文字隧道烤箱收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 73.9,
+        "y": 76.8
+      },
+      {
+        "id": "CPP-VCP-01-UL",
+        "name": "镀铜-VCP#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 9.2,
+        "y": 20.8
+      },
+      {
+        "id": "CPP-VCP-02-L",
+        "name": "CPP-VCP-02-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 12.1,
+        "y": 61.9
+      },
+      {
+        "id": "CPP-VCP-02-UL",
+        "name": "CPP-VCP-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 12.3,
+        "y": 20.5
+      },
+      {
+        "id": "WIR-Vdevelop-01-L",
+        "name": "线路-垂直显影#1-投板机",
+        "type": "L",
+        "zone": "Zone-H",
+        "x": 22.7,
+        "y": 72.2
+      },
+      {
+        "id": "CPP-Horizontalplating-01-L",
+        "name": "镀铜-水平电镀#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 6.8,
+        "y": 20.6
+      },
+      {
+        "id": "CPP-Horizontalplating-01-UL",
+        "name": "镀铜-水平电镀#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 6.9,
+        "y": 69.1
+      },
+      {
+        "id": "WIR-SE-01-L",
+        "name": "线路-SE#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 23.1,
+        "y": 17
+      },
+      {
+        "id": "WIR-SE-01-UL",
+        "name": "线路-SE#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 23.3,
+        "y": 43.5
+      },
+      {
+        "id": "CPP-Patternplating-01-L",
+        "name": "镀铜-图形电镀#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 16.8,
+        "y": 21.5
+      },
+      {
+        "id": "CPP-Patternplating-01-UL",
+        "name": "镀铜-图形电镀#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 16.9,
+        "y": 48.2
+      },
+      {
+        "id": "WIR-LDI-01-UL",
+        "name": "线路-LDI#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 15.6,
+        "y": 68.4
+      },
+      {
+        "id": "WIR-LDI-01-L",
+        "name": "线路-LDI#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 15.7,
+        "y": 76.2
+      },
+      {
+        "id": "GLD-IR-01-UL",
+        "name": "化金-IR炉#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 65.8,
+        "y": 43.1
+      },
+      {
+        "id": "LSR-Debrowning-01-UL",
+        "name": "雷射-去棕化#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 29.2,
+        "y": 30.8
+      },
+      {
+        "id": "LSR-Debrowning-01-L",
+        "name": "雷射-去棕化#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 29.2,
+        "y": 47.8
+      },
+      {
+        "id": "LAM-BOP-03-L",
+        "name": "压合棕化线投板机#3",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 39.6,
+        "y": 79.5
+      },
+      {
+        "id": "LAM-BOP-03-UL",
+        "name": "压合棕化线收板机#3",
+        "type": "UL",
+        "zone": "Zone-G",
+        "x": 39.2,
+        "y": 59.2
+      },
+      {
+        "id": "SDM-Develop-01-UL",
+        "name": "防焊-显影#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 84.7,
+        "y": 76.1
+      },
+      {
+        "id": "SDM-Develop-01-L",
+        "name": "SDM-Develop-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 84.7,
+        "y": 61.4
+      },
+      {
+        "id": "FVI-OSP-01-UL",
+        "name": "成检OSP收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 54.1,
+        "y": 32.9
+      },
+      {
+        "id": "SDM-DI-01-UL",
+        "name": "防焊-DI曝光机#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 77.6,
+        "y": 54.9
+      },
+      {
+        "id": "GLD-Pretreatment-01-UL",
+        "name": "GLD-Pretreatment-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 59.3,
+        "y": 67.8
+      },
+      {
+        "id": "SMK-DIX-01-L",
+        "name": "防焊DI投收一体机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 77.7,
+        "y": 47.7
+      },
+      {
+        "id": "SMK-SPR-01-L",
+        "name": "防焊文字喷印机投收一体机#1",
+        "type": "L",
+        "zone": "Zone-M",
+        "x": 79.1,
+        "y": 63.2
+      },
+      {
+        "id": "SDM-DI-01-L",
+        "name": "防焊-DI曝光机#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 82.4,
+        "y": 48.2
+      },
+      {
+        "id": "WIR-TrayCleaning-01-L",
+        "name": "线路Tray盘清洗线-01-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 9.9,
+        "y": 74
+      },
+      {
+        "id": "WIR-Vdevelop-01-UL",
+        "name": "线路-垂直显影#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 22.5,
+        "y": 55
+      },
+      {
+        "id": "WIR-DES-01-L",
+        "name": "线路-DES#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 26.2,
+        "y": 78.7
+      },
+      {
+        "id": "WIR-DES-01-UL",
+        "name": "线路-DES#1-收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 26.4,
+        "y": 52
+      },
+      {
+        "id": "WIR-Decoatbake-01-UL",
+        "name": "线路-去膜烘烤#1-收板机",
+        "type": "UL",
+        "zone": "Zone-M",
+        "x": 19.6,
+        "y": 19.6
+      },
+      {
+        "id": "SMK-TRE-01-L",
+        "name": "防焊前处理线投板机#1",
+        "type": "L",
+        "zone": "Zone-K",
+        "x": 91.1,
+        "y": 79.7
+      },
+      {
+        "id": "SMK-TRE-01-UL",
+        "name": "防焊前处理线收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 91.1,
+        "y": 64.6
+      },
+      {
+        "id": "GLD-RinseENEPIG-01-UL",
+        "name": "鎳鈀金清洗收板机",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 59.4,
+        "y": 62.2
+      },
+      {
+        "id": "WIR-Decoatbake-01-L",
+        "name": "线路-去膜烘烤#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 19.5,
+        "y": 44
+      },
+      {
+        "id": "SMK-AUTPRI-01-L",
+        "name": "SMK-AUTPRI-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 90.9,
+        "y": 46.8
+      },
+      {
+        "id": "CPP-VCP-01-L",
+        "name": "镀铜-VCP#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 9.1,
+        "y": 62.1
+      },
+      {
+        "id": "GLD-IR-01-L",
+        "name": "化金-IR炉#1-投板机",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 65.7,
+        "y": 51.4
+      },
+      {
+        "id": "SMK-DEV-01-UL",
+        "name": "防焊显影收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 81.8,
+        "y": 76.3
+      },
+      {
+        "id": "SMK-DEV-01-L",
+        "name": "防焊显影投板机#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 81.9,
+        "y": 61.6
+      },
+      {
+        "id": "SUR-FLM-01-UL",
+        "name": "表面处理去膜线收板机#1",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 68.4,
+        "y": 56.6
+      },
+      {
+        "id": "WIR-Pretreatment-01-L",
+        "name": "线路-前处理压膜#1-投板机",
+        "type": "L",
+        "zone": "Zone-K",
+        "x": 19.8,
+        "y": 53.9
+      },
+      {
+        "id": "WIR-Pretreatment-01-UL",
+        "name": "线路-前处理压膜#1-收板机",
+        "type": "UL",
+        "zone": "Zone-L",
+        "x": 19.7,
+        "y": 75.8
+      },
+      {
+        "id": "GLD-Pretreatment-01-L",
+        "name": "化金-前处理#1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 59.7,
+        "y": 78.6
+      },
+      {
+        "id": "SMK-TUN-01-L",
+        "name": "防焊后烤投板机#1",
+        "type": "L",
+        "zone": "Zone-D",
+        "x": 76.5,
+        "y": 61.1
+      },
+      {
+        "id": "SMK-TUN-01-UL",
+        "name": "防焊后烤收板机#1",
+        "type": "UL",
+        "zone": "Zone-H",
+        "x": 76.3,
+        "y": 80.1
+      },
+      {
+        "id": "FVI-CLE-01-L",
+        "name": "FVI-CLE-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 51.9,
+        "y": 44.5
+      },
+      {
+        "id": "FVI-CLE-01-UL",
+        "name": "FVI-CLE-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 51.8,
+        "y": 31.1
+      },
+      {
+        "id": "FVI-CLE-02-UL",
+        "name": "FVI-CLE-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 51.7,
+        "y": 26
+      },
+      {
+        "id": "FVI-OSP-01-L",
+        "name": "FVI-OSP-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 54.3,
+        "y": 50.6
+      },
+      {
+        "id": "LAM-BOP-04-L",
+        "name": "LAM-BOP-04-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 36.5,
+        "y": 79.2
+      },
+      {
+        "id": "LAM-DLD-01-L",
+        "name": "LAM-DLD-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 37.1,
+        "y": 58.9
+      },
+      {
+        "id": "SMK-AUTPRI-01-UL",
+        "name": "SMK-AUTPRI-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 89.3,
+        "y": 50.6
+      },
+      {
+        "id": "WIR-DES-02-L",
+        "name": "WIR-DES-02-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 31.1,
+        "y": 78.9
+      },
+      {
+        "id": "WIR-DES-02-UL",
+        "name": "WIR-DES-02-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 31.3,
+        "y": 52.7
+      },
+      {
+        "id": "LAM-RED-01-L",
+        "name": "LAM-RED-01-L",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 32.7,
+        "y": 32.5
+      },
+      {
+        "id": "LAM-RED-01-UL",
+        "name": "LAM-RED-01-UL",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 32.6,
+        "y": 13.7
+      },
+      {
+        "id": "EAP1",
+        "name": "EAP1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 70.9,
+        "y": 62.7
+      },
+      {
+        "id": "EAP2",
+        "name": "EAP2",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 70.8,
+        "y": 76.5
+      }
+    ]
+  },
+  "PA06": {
+    "1": [
+      {
+        "id": "LOAD1",
+        "name": "LOAD1",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 31.4,
+        "y": 38.3
+      },
+      {
+        "id": "LOAD2",
+        "name": "LOAD2",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 26.2,
+        "y": 38.4
+      },
+      {
+        "id": "LOAD3",
+        "name": "LOAD3",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 20.1,
+        "y": 39.4
+      },
+      {
+        "id": "LOAD4",
+        "name": "LOAD4",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 15.2,
+        "y": 39.3
+      },
+      {
+        "id": "LOAD5",
+        "name": "LOAD5",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 9.8,
+        "y": 39.1
+      }
+    ],
+    "2": [
+      {
+        "id": "LOAD6",
+        "name": "LOAD6",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 32.3,
+        "y": 43.4
+      },
+      {
+        "id": "LOAD7",
+        "name": "LOAD7",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 26.4,
+        "y": 43.7
+      },
+      {
+        "id": "LOAD8",
+        "name": "LOAD8",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 19.3,
+        "y": 43.3
+      },
+      {
+        "id": "LOAD9",
+        "name": "LOAD9",
+        "type": "UL",
+        "zone": "Zone-N",
+        "x": 13.3,
+        "y": 43.4
+      },
+      {
+        "id": "LOAD10",
+        "name": "LOAD10",
+        "type": "L",
+        "zone": "Zone-N",
+        "x": 9.1,
+        "y": 44.3
+      }
+    ]
+  }
+}

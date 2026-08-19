@@ -29,7 +29,9 @@ echo.
 if not exist ".env" goto no_env
 
 echo Starting server...
+echo The dashboard opens in your browser as soon as it is ready.
 echo.
+start "" /min "%~dp0open-ui.bat"
 node eap-server.js
 echo.
 echo ------------------------------------------

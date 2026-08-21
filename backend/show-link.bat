@@ -11,7 +11,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ==========================================
-echo   EAP Monitor - Dashboard link
+echo   SENTRA - Dashboard link
 echo ==========================================
 
 if not exist "%~dp0tools\show-link.ps1" goto no_script

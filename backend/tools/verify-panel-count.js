@@ -48,7 +48,7 @@ const SUMMARY_SQL = `
       AND ${IS_PANEL_EVENT}
       ${machineFilter}
   ),
-  /* วิธีเดิม: ทุกแถวที่อ่าน QR ได้ ใน 24 ชม. */
+  /*ทุกแถวที่อ่าน QR ได้ ใน 24 ชม */
   old_stats AS (
     SELECT MACHINE_ID, SUM(CASE WHEN IS_UNREAD = 0 THEN 1 ELSE 0 END) AS OLD_OK
     FROM panel_base GROUP BY MACHINE_ID

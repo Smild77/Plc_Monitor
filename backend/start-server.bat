@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title EAP Monitor - Server
+title SENTRA - Server
 cd /d "%~dp0"
 
 rem Prefer a portable Node.js shipped next to the project. This is what lets
@@ -11,7 +11,7 @@ set "PORTABLE_NODE=%~dp0..\node-portable"
 if exist "%PORTABLE_NODE%\node.exe" set "PATH=%PORTABLE_NODE%;%PATH%"
 
 echo ==========================================
-echo   EAP Monitor - Start Server
+echo   SENTRA - Start Server
 echo ==========================================
 echo.
 echo  1. Check you are on the company network (wifi PAIPEI)

@@ -1,4 +1,4 @@
-# Applies an update package on the machine that runs EAP Monitor.
+# Applies an update package on the machine that runs SENTRA.
 #
 # Copying the files by hand fails while the server is running: node.exe holds
 # the files it serves, so Explorer refuses to replace them - and when it fails

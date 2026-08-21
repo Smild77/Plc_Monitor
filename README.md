@@ -1,4 +1,4 @@
-# PLC Monitor — EAP Factory Dashboard
+# SENTRA — EAP Factory Dashboard
 
 Real-time Machine Status Monitor สำหรับโรงงาน PA01 และ PA06
 ดึงข้อมูลจาก Oracle DB ส่งผ่าน WebSocket มาแสดงบน Dashboard

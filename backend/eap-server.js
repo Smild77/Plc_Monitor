@@ -105,12 +105,26 @@ function purgeOldQrLogs() {
 // ─── Config ───────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '3001')
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '3000')
-const POLL_MINUTES = parseInt(process.env.POLL_MINUTES || '2')
+/* ★ ค่าที่เอาไปต่อใส่ SQL ต้องเป็นจำนวนเต็มบวกเสมอ — ถ้า .env พิมพ์ผิดจะได้ NaN
+   แล้วกลายเป็น "SYSDATE - NaN/1440" ซึ่ง Oracle ฟ้อง ORA-00904 ตอน runtime
+   ไม่ใช่ตอน start ทำให้ตามยาก */
+function posInt(v, fallback) {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+const POLL_MINUTES = posInt(process.env.POLL_MINUTES, 2)
+/* ★ [FIX] ช่วงย้อนหลังของยอด panel/LOT — แยกออกจาก POLL_MINUTES เพราะสองส่วนนี้
+   ต้องการคนละช่วง: latest_status อยากได้แค่ "สถานะล่าสุด" ของเครื่องที่เพิ่งเดิน
+   ส่วนยอด OK/Error เป็นตัวเลขสะสมทั้งกะ เดิมฮาร์ดโค้ดไว้ 24 ชม.ทั้งคู่
+   ลดค่านี้ได้ถ้า query ยังช้า (เช่น 720 = 12 ชม.) แลกกับยอดสะสมที่สั้นลง */
+const PANEL_STATS_MINUTES = posInt(process.env.PANEL_STATS_MINUTES, 1440)
 // ★ ระยะเวลาที่ถือว่าเครื่อง "ไม่มีข้อมูล" (NO_DATA) — ถ้าเครื่องไม่ active ในช่วงนี้ → สีเทาจาง
 // STALE_MINUTES ควร >= POLL_MINUTES (เพราะ DB query ใช้ POLL_MINUTES เป็น lookback)
-const STALE_MINUTES = parseInt(process.env.STALE_MINUTES || POLL_MINUTES)
+const STALE_MINUTES = posInt(process.env.STALE_MINUTES, POLL_MINUTES)
 // ★ เวลาสูงสุดที่ยอมให้ query ของ poll ใช้ — เกินนี้ Oracle จะยกเลิก call และ watchdog จะปลดล็อก
-const POLL_TIMEOUT_MS = parseInt(process.env.POLL_TIMEOUT_MS || '15000')
+const POLL_TIMEOUT_MS = posInt(process.env.POLL_TIMEOUT_MS, 15000)
+// ★ query ที่ใช้เกินค่านี้จะถูก log ไว้ — เตือนก่อนที่มันจะโตจนชน POLL_TIMEOUT_MS
+const SLOW_QUERY_WARN_MS = posInt(process.env.SLOW_QUERY_WARN_MS, Math.round(POLL_TIMEOUT_MS / 3))
 
 // ★ เทส: จำกัดเครื่อง (null = ทุกเครื่อง)
 const ALLOWED_MACHINES = process.env.ALLOWED_MACHINES
@@ -513,7 +527,9 @@ async function fetchAllMachines() {
   }
 }
 
- // ─── SQL Query ───
+let loggedFirstPollTiming = false
+
+// ─── SQL Query ───
  async function fetchLatestMachineStates() {
   const p = await getPool()
   const conn = await p.getConnection()
@@ -534,7 +550,14 @@ async function fetchAllMachines() {
           DATE_TIME      AS PANEL_TIME,
           ROW_NUMBER() OVER (PARTITION BY COALESCE(SUB_EQP_ID, MAIN_EQP_ID) ORDER BY DATE_TIME DESC) AS rn
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-        WHERE DATE_TIME >= SYSDATE - 1440/1440
+        /* ★ [FIX] เดิมฮาร์ดโค้ด 1440/1440 (= 24 ชม.) ทั้งที่ .env ตั้ง POLL_MINUTES ไว้
+           และ banner ตอน start ก็ประกาศว่า "Lookback: 15 min" — ค่านั้นไม่เคยถูกใช้เลย
+           ผลคือทุก ๆ 3 วินาที Oracle ต้อง ROW_NUMBER() เรียงข้อมูลทั้ง 24 ชม.
+           เพื่อเอาแค่แถวล่าสุดของแต่ละเครื่อง (WHERE rn = 1) จนชน call timeout
+           ส่วนนี้ต้องการแค่ "เครื่องที่เพิ่งเดินใน POLL_MINUTES ล่าสุด" พอ
+           เครื่องที่เงียบเกินช่วงนี้จะไม่ถูกคืนมา แล้วโค้ดข้างล่างจะ mark เป็น
+           NO_DATA ให้เอง — ตรงกับที่ .env อธิบาย STALE_MINUTES ไว้ */
+        WHERE DATE_TIME >= SYSDATE - ${POLL_MINUTES}/1440
       ),
       -- ★ [FIX] normalize PANEL_ID + คัด dummy/jig ครั้งเดียว แล้วใช้ต่อทั้ง panel_stats และ lot_panel_stats
       panel_base AS (
@@ -544,7 +567,8 @@ async function fetchAllMachines() {
           DATE_TIME,
 ${SQL_PANEL_FLAGS}
         FROM PAEAPTRACE.EAP_EQP_EVENT_PNL_PNL
-        WHERE DATE_TIME >= SYSDATE - 1440/1440
+        -- ★ ยอดสะสม ยังต้องมองย้อนหลังยาว แต่ปรับได้จาก .env แล้ว (ดู PANEL_STATS_MINUTES)
+        WHERE DATE_TIME >= SYSDATE - ${PANEL_STATS_MINUTES}/1440
           AND ${SQL_IS_PANEL_EVENT}
       ),
       panel_stats AS (
@@ -639,9 +663,21 @@ ${SQL_PCT_QR}    AS PCT_QR,
       WHERE E.rn = 1
       ORDER BY E.EVENT_TIME DESC
     `
+    /* ★ [FIX] จับเวลา query ไว้ — ตอน NJS-123 เด้ง log บอกแค่ว่า "เกิน 15 วิ"
+       ไม่บอกว่าปกติใช้กี่วิ เลยไม่รู้ว่าใกล้ชนเพดานแค่ไหน หรือแก้แล้วดีขึ้นจริงไหม */
+    const t0 = Date.now()
     const result = await conn.execute(sql, [], {
       outFormat: oracledb.OUT_FORMAT_OBJECT,
     })
+    const ms = Date.now() - t0
+    if (ms >= SLOW_QUERY_WARN_MS) {
+      console.warn(`[Poll] SLOW query: ${ms}ms (${result.rows.length} rows) - limit is ${POLL_TIMEOUT_MS}ms`)
+      console.warn(`[Poll]   If close to the limit, lower PANEL_STATS_MINUTES in .env (now ${PANEL_STATS_MINUTES} min)`)
+    } else if (!loggedFirstPollTiming) {
+      // log รอบแรกที่สำเร็จเสมอ เพื่อให้มีค่าอ้างอิงไว้เทียบตอนมีปัญหา
+      loggedFirstPollTiming = true
+      console.log(`[Poll] first query took ${ms}ms (${result.rows.length} rows)`)
+    }
     return result.rows.map(normalizeRow)
   } finally {
     await conn.close()
@@ -2001,8 +2037,11 @@ wsHeartbeatTimer.unref()
 
 // ─── Start ────────────────────────────────────────────
 async function main() {
-  console.log('=== EAP Monitor Server (Standalone) ===')
-  console.log(`[Info] Poll: every ${POLL_INTERVAL_MS}ms | Lookback: ${POLL_MINUTES} min`)
+  console.log('=== SENTRA(Standalone) ===')
+  /* ★ พิมพ์ช่วงเวลาที่ query ใช้จริง ไม่ใช่แค่ที่ตั้งไว้ — บั๊กรอบก่อนคือ banner
+     ประกาศ "Lookback: 15 min" แต่ SQL ฮาร์ดโค้ด 24 ชม. ไว้ ไม่มีทางรู้จากหน้าจอเลย */
+  console.log(`[Info] Poll: every ${POLL_INTERVAL_MS}ms | Lookback: ${POLL_MINUTES} min | ` +
+              `PanelStats: ${PANEL_STATS_MINUTES} min | timeout: ${POLL_TIMEOUT_MS}ms`)
   /* ★ [FIX] ลบ QR log เก่ากว่า 30 วัน — ของเดิมรันแค่ครั้งเดียวตอน start
      server ที่เปิดทิ้งไว้เป็นเดือน ๆ จะไม่เคยลบไฟล์เก่าเลย แม้ตั้ง retention ไว้แล้ว
      (ไฟล์วันที่งานเยอะ ~580 KB/วัน → ปีนึงราว 200 MB) */
@@ -2073,6 +2112,24 @@ async function shutdown() {
   if (pool) { await pool.close(10); pool = null }
   process.exit(0)
 }
+
+/* ★ [FIX] Node ตั้งค่า default ให้ unhandled promise rejection ฆ่า process ทิ้ง
+   promise เดียวที่พลาดไป (เช่น query ที่ DB ตัดกลางคัน, socket เขียนไม่ได้)
+   จะทำให้จอมอนิเตอร์ทั้งไลน์ดับ และ start-server.bat ไม่ได้เปิดใหม่ให้เอง
+   (หน้าต่างขึ้น "Server stopped." แล้วค้างรอคนมากดเอง)
+   ทิศทางเดียวกับที่ Oracle ต่อไม่ติดแล้วไม่ exit: log ไว้แล้วรันต่อ เพราะทุก path
+   ที่สำคัญมี retry ของตัวเองอยู่แล้ว (poll ทุก 3 วิ / reconnect ทุก 30 วิ) */
+process.on('unhandledRejection', (reason) => {
+  console.error('[UnhandledRejection]', reason && reason.stack ? reason.stack : reason)
+})
+
+/* uncaughtException ต่างจากข้างบนตรงที่ state หลังจากนี้เชื่อไม่ได้ 100%
+   แต่บนเครื่องที่ไม่มีตัวคุม restart การรันต่อแบบพิการยังดีกว่าจอดับสนิท
+   ★ ถ้าเห็น log นี้บ่อย ๆ ให้ตามแก้ที่ต้นเหตุ อย่าปล่อยผ่าน */
+process.on('uncaughtException', (err) => {
+  console.error('[UncaughtException]', err && err.stack ? err.stack : err)
+  console.error('[UncaughtException] server ยังรันต่อ — ถ้าข้อมูลเริ่มเพี้ยน ให้ปิดแล้วเปิดใหม่')
+})
 
 process.on('SIGTERM', shutdown)
 process.on('SIGINT', shutdown)

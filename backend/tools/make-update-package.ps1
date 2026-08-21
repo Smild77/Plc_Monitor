@@ -1,4 +1,4 @@
-# Builds update packages for a machine that already runs EAP Monitor.
+# Builds update packages for a machine that already runs SENTRA.
 #
 # Produces two things on the Desktop:
 #   eap-monitor-update-<stamp>.zip   the payload on its own
@@ -33,6 +33,7 @@ $include = @(
     'backend/package.json',
     'backend/package-lock.json',
     'backend/lib',
+    'backend/assets',
     'backend/config',
     'backend/sql',
     'backend/tools',
@@ -138,7 +139,7 @@ for ($p = 0; $p -lt $payload.Length; $p += 1000) {
 $head = @"
 @echo off
 rem ===========================================================================
-rem  EAP Monitor - one-file updater   (built $stamp)
+rem  SENTRA - one-file updater   (built $stamp)
 rem
 rem  Copy this file into the backend folder on the machine that runs the
 rem  server, then double-click it. It stops the server, replaces the app
@@ -155,7 +156,7 @@ cd /d "%~dp0"
 set "EAPBAT=%~f0"
 
 echo ==========================================
-echo   EAP Monitor - Update
+echo   SENTRA - Update
 echo ==========================================
 echo.
 
@@ -182,7 +183,18 @@ goto :eof
 "@
 
 $updater = Join-Path $desktop 'update-eap.bat'
-if (Test-Path $updater) { Remove-Item -LiteralPath $updater -Force }
+# The previous updater is often still held open - copied to a USB stick, open in
+# an editor, or being scanned. Losing a whole build to that is not acceptable,
+# so fall back to a stamped name and say which file to actually carry.
+if (Test-Path $updater) {
+    try { Remove-Item -LiteralPath $updater -Force -ErrorAction Stop }
+    catch {
+        $updater = Join-Path $desktop "update-eap-$stamp.bat"
+        Write-Host "[NOTE] Desktop\update-eap.bat is locked by another process."
+        Write-Host "       Writing $(Split-Path -Leaf $updater) instead - close whatever is holding"
+        Write-Host "       the old file, delete it, then rename this one to update-eap.bat."
+    }
+}
 $sw = New-Object IO.StreamWriter($updater, $false, [Text.Encoding]::ASCII)
 $sw.NewLine = "`r`n"
 foreach ($line in ($head -split "`r?`n")) { $sw.WriteLine($line) }

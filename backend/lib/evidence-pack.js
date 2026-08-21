@@ -313,7 +313,7 @@ function generatePdf(data, res, reportConfig) {
     doc.fillColor('#000').fontSize(12).text('No alarms recorded for this machine in the selected period (' + data.label + ').')
     doc.moveDown(2)
     doc.fontSize(8).fillColor('#888')
-    doc.text('Report ID: ' + reportId + '   |   Generated: ' + new Date().toISOString() + '   |   Source: PLC Monitor — EAP Factory Dashboard')
+    doc.text('Report ID: ' + reportId + '   |   Generated: ' + new Date().toISOString() + '   |   Source: SENTRA — EAP Factory Dashboard')
     doc.end()
     return reportId
   }
@@ -392,7 +392,7 @@ function generatePdf(data, res, reportConfig) {
   // Footer
   doc.moveDown(2)
   doc.fontSize(8).fillColor('#888')
-  doc.text('Report ID: ' + reportId + '   |   Generated: ' + new Date().toISOString() + '   |   Source: PLC Monitor — EAP Factory Dashboard')
+  doc.text('Report ID: ' + reportId + '   |   Generated: ' + new Date().toISOString() + '   |   Source: SENTRA — EAP Factory Dashboard')
   if (reportConfig.contact) doc.text('Contact: ' + reportConfig.contact)
   doc.fillColor('#000')
 

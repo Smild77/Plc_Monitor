@@ -1,5 +1,5 @@
 @echo off
-rem Creates the "EAP Monitor Server" shortcut on the desktop.
+rem Creates the "SENTRA" shortcut on the desktop.
 rem
 rem Double-click this after copying the project onto a new PC. The .lnk file
 rem stores absolute paths, so it cannot be shipped inside the zip - it has to
@@ -15,7 +15,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ==========================================
-echo   EAP Monitor - Create desktop shortcut
+echo   SENTRA - Create desktop shortcut
 echo ==========================================
 echo.
 

@@ -14,7 +14,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ==========================================
-echo   EAP Monitor - Apply update
+echo   SENTRA - Apply update
 echo ==========================================
 echo.
 

@@ -1,7 +1,7 @@
 {
-  "name": "plc-monitor-backend",
+  "name": "sentra-backend",
   "version": "1.0.0",
-  "description": "PLC Monitor Backend — Oracle DB + WebSocket real-time (standalone EAP server)",
+  "description": "SENTRA Backend — Oracle DB + WebSocket real-time (standalone EAP server)",
   "main": "eap-server.js",
   "engines": {
     "node": ">=18.0.0"

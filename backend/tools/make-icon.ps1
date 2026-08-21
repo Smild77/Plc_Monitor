@@ -1,7 +1,34 @@
+# Renders the Sentra icons: the "sentry ring" mark, on two different fields.
+#
+# Outputs
+#   backend/assets/eap-monitor.ico        desktop shortcut / window icon
+#                                         -> the horizontal ink badge
+#   frontend/brand/sentra-icon-512.png    generic PNG icon
+#   frontend/brand/apple-touch-icon.png   180px, for "add to home screen"
+#   frontend/brand/favicon-32.png         .ico fallback for old browsers
+#                                         -> the square accent squircle
+#
+# Two shapes on purpose. The browser and iOS both crop/mask to a square, so the
+# web icons use the squircle from frontend/brand/sentra-icon-accent-512.svg. The
+# desktop shortcut was asked for as the horizontal badge, drawn from
+# frontend/brand/sentra-badge-horizontal.svg - keep each SVG in step with the
+# code below if the artwork changes.
+#
+# A .ico frame is always square, so the badge is letterboxed: it spans the full
+# width and is centred vertically, which leaves the mark at half the height it
+# would get on a squircle. That is why the small frames enlarge the mark within
+# the badge and drop the dashed inner ring, which the brand sheet allows below
+# 40px and which would otherwise render as mush.
 Add-Type -AssemblyName System.Drawing
 
-$outPath = 'D:\server\plc-full-project\backend\assets\eap-monitor.ico'
-$sizes   = @(16, 24, 32, 48, 64, 128, 256)
+$root      = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$icoPath   = Join-Path $root 'backend\assets\eap-monitor.ico'
+$brandDir  = Join-Path $root 'frontend\brand'
+$icoSizes  = @(16, 24, 32, 48, 64, 128, 256)
+
+$Accent = [System.Drawing.Color]::FromArgb(255, 0x3B, 0x6F, 0xE0)
+$Ink    = [System.Drawing.Color]::FromArgb(255, 0x0B, 0x0C, 0x0E)
+$White  = [System.Drawing.Color]::White
 
 function New-RoundedPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$r) {
     $p = New-Object System.Drawing.Drawing2D.GraphicsPath
@@ -14,56 +41,87 @@ function New-RoundedPath([single]$x, [single]$y, [single]$w, [single]$h, [single
     return $p
 }
 
-function New-IconBitmap([int]$s) {
-    # pulse / heartbeat polyline, as fractions of the icon size
-    $pulse = @(
-        @(0.15, 0.54), @(0.31, 0.54), @(0.39, 0.32),
-        @(0.51, 0.74), @(0.61, 0.46), @(0.69, 0.54), @(0.85, 0.54)
-    )
+# Draws the mark on its native 48x48 grid, scaled by $k and offset by $ox/$oy.
+function Draw-Mark($g, [single]$ox, [single]$oy, [single]$k, [bool]$withDashes, $dotColor) {
+    $stroke = [single](3.2 * $k)
+    $cx = $ox + 24 * $k
+    $cy = $oy + 24 * $k
 
+    $pen = New-Object System.Drawing.Pen($White, $stroke)
+    $r = [single](20 * $k)
+    $g.DrawEllipse($pen, $cx - $r, $cy - $r, $r * 2, $r * 2)
+
+    if ($withDashes) {
+        $dash = New-Object System.Drawing.Pen($White, $stroke)
+        # SVG stroke-dasharray "12 8" is in user units; GDI+ wants pen widths.
+        $dash.DashPattern = [single[]]@([single](12 / 3.2), [single](8 / 3.2))
+        $dash.DashCap     = [System.Drawing.Drawing2D.DashCap]::Round
+        $ri = [single](11 * $k)
+        $g.DrawEllipse($dash, $cx - $ri, $cy - $ri, $ri * 2, $ri * 2)
+        $dash.Dispose()
+    }
+
+    # the sentry dot, at 12 o'clock on the outer ring
+    $brush = New-Object System.Drawing.SolidBrush($dotColor)
+    $rd = [single](4.6 * $k)
+    $dx = $ox + 24 * $k
+    $dy = $oy + 4 * $k
+    $g.FillEllipse($brush, $dx - $rd, $dy - $rd, $rd * 2, $rd * 2)
+
+    $brush.Dispose(); $pen.Dispose()
+}
+
+# Square accent squircle - the web icons.
+function New-SquareBitmap([int]$s) {
     $bmp = New-Object System.Drawing.Bitmap($s, $s, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $g   = [System.Drawing.Graphics]::FromImage($bmp)
     $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.PixelOffsetMode   = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
     $g.Clear([System.Drawing.Color]::Transparent)
 
-    $inset  = [single]($s * 0.045)
-    $side   = [single]($s - $inset * 2)
-    $radius = [single]($s * 0.215)
-    $body   = New-RoundedPath $inset $inset $side $side $radius
+    # accent squircle: 114/512 corner radius, same as the SVG
+    $radius = [single]($s * 114 / 512)
+    $tile   = New-RoundedPath 0 0 ([single]$s) ([single]$s) $radius
+    $fill   = New-Object System.Drawing.SolidBrush($Accent)
+    $g.FillPath($fill, $tile)
 
-    # green gradient body
-    $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-        (New-Object System.Drawing.Point(0, 0)),
-        (New-Object System.Drawing.Point(0, $s)),
-        [System.Drawing.Color]::FromArgb(255, 86, 211, 100),
-        [System.Drawing.Color]::FromArgb(255, 26, 127, 55))
-    $g.FillPath($brush, $body)
+    # the SVG insets the 48-unit mark by 128/512 and scales it to 256/512
+    $k  = [single]($s * 256 / 512 / 48)
+    $in = [single]($s * 128 / 512)
+    Draw-Mark $g $in $in $k ($s -ge 40) $White
 
-    # dark rim so it stays defined on a light desktop
-    $penW = [single]([Math]::Max(1.0, $s * 0.035))
-    $rim  = New-Object System.Drawing.Pen(
-        [System.Drawing.Color]::FromArgb(255, 13, 17, 23), $penW)
-    $g.DrawPath($rim, $body)
-
-    # heartbeat line
-    $pts = @()
-    foreach ($p in $pulse) {
-        $pts += New-Object System.Drawing.PointF([single]($p[0] * $s), [single]($p[1] * $s))
-    }
-    $linePen = New-Object System.Drawing.Pen(
-        [System.Drawing.Color]::FromArgb(255, 13, 17, 23),
-        [single]([Math]::Max(1.4, $s * 0.085)))
-    $linePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $linePen.EndCap   = [System.Drawing.Drawing2D.LineCap]::Round
-    $linePen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
-    $g.DrawLines($linePen, [System.Drawing.PointF[]]$pts)
-
-    $linePen.Dispose(); $rim.Dispose(); $brush.Dispose(); $body.Dispose(); $g.Dispose()
+    $fill.Dispose(); $tile.Dispose(); $g.Dispose()
     return $bmp
 }
 
-# Convert a bitmap to a classic DIB icon image: BITMAPINFOHEADER + bottom-up BGRA + AND mask.
+# Horizontal ink badge, letterboxed into a square frame - the desktop icon.
+function New-BadgeBitmap([int]$s) {
+    $bmp = New-Object System.Drawing.Bitmap($s, $s, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g   = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.PixelOffsetMode   = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    $g.Clear([System.Drawing.Color]::Transparent)
+
+    $h   = [single]($s / 2.0)      # 2:1, full width
+    $top = [single](($s - $h) / 2) # centred in the square frame
+    $tile = New-RoundedPath 0 $top ([single]$s) $h ([single]($h * 0.30))
+    $fill = New-Object System.Drawing.SolidBrush($Ink)
+    $g.FillPath($fill, $tile)
+
+    # below ~40px of badge height the dashes turn to mush, so drop them and let
+    # the mark grow into the space they were taking
+    $dashes = ($h -ge 40)
+    if ($dashes) { $frac = 0.75 } else { $frac = 0.86 }
+    $k = [single]($h * $frac / 48)
+    Draw-Mark $g ([single]($s / 2.0 - 24 * $k)) ([single]($top + $h / 2.0 - 24 * $k)) $k $dashes $Accent
+
+    $fill.Dispose(); $tile.Dispose(); $g.Dispose()
+    return $bmp
+}
+
+# Classic DIB icon frame: BITMAPINFOHEADER + bottom-up BGRA + AND mask.
 function ConvertTo-IconDib([System.Drawing.Bitmap]$bmp) {
     $s    = $bmp.Width
     $rect = New-Object System.Drawing.Rectangle(0, 0, $s, $s)
@@ -86,7 +144,6 @@ function ConvertTo-IconDib([System.Drawing.Bitmap]$bmp) {
     $bw.Write([Int32]0); $bw.Write([Int32]0)
     $bw.Write([UInt32]0); $bw.Write([UInt32]0)
 
-    # XOR bitmap, bottom-up
     for ($y = $s - 1; $y -ge 0; $y--) {
         $bw.Write($src, $y * $ld.Stride, $s * 4)
     }
@@ -101,9 +158,17 @@ function ConvertTo-IconDib([System.Drawing.Bitmap]$bmp) {
     return ,$bytes
 }
 
+function Save-Png([int]$s, [string]$path) {
+    $bmp = New-SquareBitmap $s
+    $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+    Write-Output ("Wrote {0} ({1} bytes)" -f $path, (Get-Item $path).Length)
+}
+
+# ── .ico ──────────────────────────────────────────────
 $images = @()
-foreach ($s in $sizes) {
-    $bmp = New-IconBitmap $s
+foreach ($s in $icoSizes) {
+    $bmp = New-BadgeBitmap $s
     if ($s -ge 256) {
         # 256px is PNG-compressed by convention, keeping the file small
         $ms = New-Object System.IO.MemoryStream
@@ -116,7 +181,7 @@ foreach ($s in $sizes) {
     $bmp.Dispose()
 }
 
-$fs = [System.IO.File]::Create($outPath)
+$fs = [System.IO.File]::Create($icoPath)
 $bw = New-Object System.IO.BinaryWriter($fs)
 
 $bw.Write([UInt16]0)                # reserved
@@ -140,5 +205,9 @@ foreach ($img in $images) {
 foreach ($img in $images) { $bw.Write($img[1]) }
 
 $bw.Flush(); $bw.Close(); $fs.Close()
+Write-Output ("Wrote {0} ({1} bytes, sizes: {2})" -f $icoPath, (Get-Item $icoPath).Length, ($icoSizes -join ', '))
 
-Write-Output ("Wrote {0} ({1} bytes, sizes: {2})" -f $outPath, (Get-Item $outPath).Length, ($sizes -join ', '))
+# ── PNGs for the web page ─────────────────────────────
+Save-Png 512 (Join-Path $brandDir 'sentra-icon-512.png')
+Save-Png 180 (Join-Path $brandDir 'apple-touch-icon.png')
+Save-Png 32  (Join-Path $brandDir 'favicon-32.png')

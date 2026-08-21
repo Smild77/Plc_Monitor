@@ -1,4 +1,4 @@
-# 📊 EAP Monitor — วิธีรัน
+# 📊 SENTRA — วิธีรัน
 
 > คู่มือย่อสำหรับหน้างาน — รายละเอียดทั้งหมด (API, กล้อง, Evidence Pack, ปุ่มลัด) อยู่ใน [README.md](README.md)
 

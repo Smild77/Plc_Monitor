@@ -8,7 +8,7 @@ Real-time Machine Status Monitor สำหรับโรงงาน PA01 แ�
 ```
 Oracle DB (PAEAPTRACE / DWD_PA01_PRD)
     ↓ poll ทุก 3 วินาที
-Node.js Server (eap-server.js)
+Node.js Server (sentra-server.js)
     ↓ WebSocket push (เฉพาะที่เปลี่ยน)
 Frontend Dashboard (index.html)
 ```
@@ -71,7 +71,7 @@ Frontend Dashboard (index.html)
 
 ### 1. ติดตั้ง dependencies
 ```bash
-cd plc-full-project/backend
+cd sentra/backend
 npm install
 ```
 
@@ -112,7 +112,7 @@ ORACLE_PASSWORD=your_password_here
 หรือพิมพ์ใน terminal:
 ```bash
 npm start
-# หรือ: node eap-server.js
+# หรือ: node sentra-server.js
 ```
 
 โหมดพัฒนา (auto-reload):
@@ -260,15 +260,15 @@ http://localhost:3001/
 ## โครงสร้างโปรเจกต์
 
 ```
-plc-full-project/
+sentra/
 ├── backend/
-│   ├── eap-server.js           ← main entry point (HTTP + WS + Oracle poll)
+│   ├── sentra-server.js           ← main entry point (HTTP + WS + Oracle poll)
 │   ├── .env                    ← Oracle credentials + config (git-ignored)
 │   ├── .env.example            ← ตัวอย่าง .env พร้อมคำอธิบายทุกตัวแปร (คัดลอกไปเป็น .env)
 │   ├── start-server.bat        ← ตัวเริ่มเซิร์ฟเวอร์บน Windows
 │   ├── package.json
 │   │
-│   ├── lib/                    ← โมดูลที่ eap-server.js require เข้าไปใช้
+│   ├── lib/                    ← โมดูลที่ sentra-server.js require เข้าไปใช้
 │   │   ├── hikvision.js        ← ISAPI client (digest auth + live/playback) สำหรับกล้อง NVR
 │   │   └── evidence-pack.js    ← Vendor Evidence Pack: query + PDF generation (pdfkit)
 │   │
@@ -322,7 +322,7 @@ plc-full-project/
 
 | อาการ | สาเหตุ | วิธีแก้ |
 |------|------|------|
-| หน้าเว็บเปิดไม่ได้ | ยังไม่รัน server | รัน `start-server.bat` หรือ `node eap-server.js` |
+| หน้าเว็บเปิดไม่ได้ | ยังไม่รัน server | รัน `start-server.bat` หรือ `node sentra-server.js` |
 | "Oracle connection FAILED" | ยังไม่สลับ wifi/VPN | สลับเข้าเครือข่ายบริษัท → server จะ retry ทุก 30 วิ อัตโนมัติ |
 | โหลดไม่ได้ในเว็บ | เปิดเป็น `file://` | เปิดผ่าน `http://localhost:3001/` เท่านั้น |
 | ข้อมูลไม่ขึ้น | Oracle ยังไม่ติด | ดู terminal — รอ retry หรือเช็ค wifi อีกครั้ง |
@@ -347,7 +347,7 @@ node tools/test-conn.js
 
 ## Notes
 
-- โฟลเดอร์ `backend/src/` เป็น modular version (poller / alertEngine / historyWriter / wsHub) ที่ยังไม่สมบูรณ์ ไม่ถูกใช้งานจริง — ทุกอย่างรวมอยู่ใน `eap-server.js` ไฟล์เดียว
+- โฟลเดอร์ `backend/src/` เป็น modular version (poller / alertEngine / historyWriter / wsHub) ที่ยังไม่สมบูรณ์ ไม่ถูกใช้งานจริง — ทุกอย่างรวมอยู่ใน `sentra-server.js` ไฟล์เดียว
 - หากต้องการใช้ Redis pub/sub สำหรับ multi-instance ในอนาคต ดูโครงสร้างเดิมใน `src/` เป็นจุดเริ่มต้น
 - Server ผูกกับ `0.0.0.0` — คนในวงเครือข่ายเดียวกันสามารถเข้าผ่าน LAN IP ของเครื่องที่รัน server ได้
 - QR log CSV แบ่งตามวันที่ `qr-logs/qr-YYYY-MM-DD.csv` — ลบไฟล์เก่ากว่า 30 วันอัตโนมัติตอน server start (โฟลเดอร์นี้อยู่ใน `.gitignore` ไม่ถูก commit ขึ้น git)

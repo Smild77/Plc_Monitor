@@ -40,7 +40,7 @@ echo Starting server...
 echo The dashboard opens in your browser as soon as it is ready.
 echo.
 start "" /min "%~dp0open-ui.bat"
-node eap-server.js
+node sentra-server.js
 echo.
 echo ------------------------------------------
 echo Server stopped.

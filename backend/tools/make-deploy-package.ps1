@@ -30,11 +30,11 @@
 $ErrorActionPreference = 'Stop'
 
 $backend = Split-Path -Parent $PSScriptRoot      # ...\backend\tools -> ...\backend
-$project = Split-Path -Parent $backend           # ...\plc-full-project
+$project = Split-Path -Parent $backend           # ...\sentra
 $desktop = [Environment]::GetFolderPath('Desktop')
 
-if (-not (Test-Path (Join-Path $backend 'eap-server.js'))) {
-    throw "eap-server.js not found - run this from inside the project."
+if (-not (Test-Path (Join-Path $backend 'sentra-server.js'))) {
+    throw "sentra-server.js not found - run this from inside the project."
 }
 
 # An exclude list rather than an include list: a folder added to the project
@@ -57,7 +57,7 @@ if ($files.Count -eq 0) { throw "Nothing to package." }
 
 # Fail loudly rather than shipping a zip that cannot start. Each of these is
 # something a fresh PC has no way to recreate on its own.
-foreach ($must in 'backend\.env', 'backend\eap-server.js', 'backend\start-server.bat',
+foreach ($must in 'backend\.env', 'backend\sentra-server.js', 'backend\start-server.bat',
                   'backend\node_modules\oracledb\package.json', 'frontend\index.html') {
     if (-not (Test-Path (Join-Path $project $must))) { throw "Missing from the package: $must" }
 }
@@ -118,7 +118,7 @@ Write-Host "Top level      :"
 foreach ($t in $tops) { Write-Host ("                 {0,6}  {1}" -f $t.Count, $t.Name) }
 Write-Host ""
 Write-Host "On the new PC (nothing to install):"
-Write-Host "  1. Extract the zip anywhere, e.g.  D:\server\plc-full-project"
+Write-Host "  1. Extract the zip anywhere, e.g.  D:\server\sentra"
 Write-Host "  2. Run  backend\create-shortcut.bat   to put the icon on the desktop"
 Write-Host "  3. Double-click the shortcut"
 Write-Host ""

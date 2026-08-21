@@ -1,7 +1,7 @@
 # Renders the Sentra icons: the "sentry ring" mark, on two different fields.
 #
 # Outputs
-#   backend/assets/eap-monitor.ico        desktop shortcut / window icon
+#   backend/assets/sentra.ico        desktop shortcut / window icon
 #                                         -> the horizontal ink badge
 #   frontend/brand/sentra-icon-512.png    generic PNG icon
 #   frontend/brand/apple-touch-icon.png   180px, for "add to home screen"
@@ -22,7 +22,7 @@
 Add-Type -AssemblyName System.Drawing
 
 $root      = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$icoPath   = Join-Path $root 'backend\assets\eap-monitor.ico'
+$icoPath   = Join-Path $root 'backend\assets\sentra.ico'
 $brandDir  = Join-Path $root 'frontend\brand'
 $icoSizes  = @(16, 24, 32, 48, 64, 128, 256)
 

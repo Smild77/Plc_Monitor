@@ -16,7 +16,7 @@ backend\start-server.bat
 หรือพิมพ์ใน terminal:
 ```
 cd backend
-node eap-server.js
+node sentra-server.js
 ```
 
 ### 3. เปิดหน้าเว็บใน Browser

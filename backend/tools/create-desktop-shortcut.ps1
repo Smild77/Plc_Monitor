@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 
 $backend = Split-Path -Parent $PSScriptRoot          # ...\backend\tools -> ...\backend
 $bat     = Join-Path $backend 'start-server.bat'
-$icon    = Join-Path $backend 'assets\eap-monitor.ico'
+$icon    = Join-Path $backend 'assets\sentra.ico'
 
 if (-not (Test-Path $bat)) {
     throw "start-server.bat not found at $bat - run this from inside the project."

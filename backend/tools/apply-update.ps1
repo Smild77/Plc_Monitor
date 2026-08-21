@@ -12,7 +12,7 @@
 $ErrorActionPreference = 'Stop'
 
 $backend = Split-Path -Parent $PSScriptRoot      # ...\backend\tools -> ...\backend
-$project = Split-Path -Parent $backend           # ...\plc-full-project
+$project = Split-Path -Parent $backend           # ...\sentra
 $port    = 3001
 
 # --- find the newest update package -----------------------------------------
@@ -24,12 +24,12 @@ $searchDirs = @(
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
 $zip = $searchDirs |
-    ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter 'eap-monitor-update-*.zip' -File -ErrorAction SilentlyContinue } |
+    ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter 'sentra-update-*.zip' -File -ErrorAction SilentlyContinue } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 
 if (-not $zip) {
-    Write-Host "[ERROR] No eap-monitor-update-*.zip found."
+    Write-Host "[ERROR] No sentra-update-*.zip found."
     Write-Host "        Looked in:"
     $searchDirs | ForEach-Object { Write-Host "          $_" }
     Write-Host ""

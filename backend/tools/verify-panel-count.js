@@ -1,7 +1,7 @@
 /*
   verify-panel-count.js — ตรวจว่า Total Sheet ที่หน้าจอจะแสดง ออกมาเป็นเลขกลมไหม
 
-  จำลอง logic เดียวกับ fetchLatestMachineStates() ใน eap-server.js เป๊ะๆ:
+  จำลอง logic เดียวกับ fetchLatestMachineStates() ใน sentra-server.js เป๊ะๆ:
     normalize PANEL_ID -> ตัด jig/dummy -> ตัด CEID 10117 -> นับ DISTINCT ต่อ LOT -> เลือก best_lot
   แล้วเทียบกับวิธีเดิม (นับทุกแถวใน 24 ชม.)
 
@@ -20,7 +20,7 @@ const oracledb = require('oracledb')
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT
 oracledb.fetchAsString = [oracledb.CLOB]
 
-// ★ กฎเดียวกับ eap-server.js — แก้ที่นี่ต้องแก้ที่โน่นด้วย
+// ★ กฎเดียวกับ sentra-server.js — แก้ที่นี่ต้องแก้ที่โน่นด้วย
 const NORM = `UPPER(REGEXP_SUBSTR(DBMS_LOB.SUBSTR(PANEL_ID, 100, 1), '^[^,/]+'))`
 const IS_UNREAD = `(PANEL_ID IS NULL OR DBMS_LOB.GETLENGTH(PANEL_ID) = 0 OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 5, 1)) = 'ERROR' OR UPPER(DBMS_LOB.SUBSTR(PANEL_ID, 20, 1)) LIKE '%NULL%')`
 const IS_JUNK = `(

@@ -44,7 +44,7 @@ function countLeaves(obj) {
 
 async function run() {
   console.log('\n=== 1. ไฟล์ JS parse ผ่านทั้งหมด ===')
-  const jsFiles = ['eap-server.js', 'lib/evidence-pack.js', 'lib/hikvision.js']
+  const jsFiles = ['sentra-server.js', 'lib/evidence-pack.js', 'lib/hikvision.js']
   for (const f of jsFiles) {
     try {
       new (require('vm').Script)(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f })
@@ -157,7 +157,7 @@ async function run() {
   const backupMachines = fs.readFileSync(MACHINES_PATH)
   const backupZones = fs.readFileSync(ZONES_PATH)
 
-  const srv = spawn(process.execPath, ['eap-server.js'], {
+  const srv = spawn(process.execPath, ['sentra-server.js'], {
     cwd: ROOT,
     env: { ...process.env, PORT, ORACLE_CONNECTION_STRING: 'smoke-test-no-db:1521/none' },
     stdio: 'ignore',

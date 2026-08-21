@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 $backend = Split-Path -Parent $PSScriptRoot      # ...\backend\tools -> ...\backend
 $envFile = Join-Path $backend '.env'
 
-# The port is whatever .env says; eap-server.js falls back to 3001 the same way.
+# The port is whatever .env says; sentra-server.js falls back to 3001 the same way.
 $port = 3001
 $source = 'default (no .env found)'
 if (Test-Path $envFile) {
